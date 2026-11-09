@@ -1,1 +1,4 @@
-# 1114_hackathon
+# Hackathon
+### This project is for hackathon
+### Team members:
+Yiding Wang
