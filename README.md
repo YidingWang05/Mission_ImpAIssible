@@ -2,7 +2,7 @@
 
 > Imperial AI Hackathon 2026 · 主赛道 02 Voice, Vision & Generative Media
 > 子奖：**fal** + **Anam**　｜　交叉奖：**Adaption**、**Figma**
-> Editor: Yiding Wang; Jennifer Liu；Jessica Wang
+> Editor: Yiding Wang; Jennifer Liu；Jessica Wang; Dorothy Zhu
 ## 1. 项目简介
 
 在英国，很多人的母语不是英语：国际学生、新移民、移民老人、短期访客。宿舍里的洗衣机、出租屋里的烤箱和暖气调节器，面板上全是英文缩写，很容易用错。
