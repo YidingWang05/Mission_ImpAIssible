@@ -149,4 +149,17 @@ const EXTRA = {
   hi: { more: "क्या आपका कोई और सवाल है?", dangerTitle: "सुरक्षा सूचना", play: "चलाएँ", pause: "रोकें", checking: "सुरक्षा जाँच हो रही है…" },
   pt: { more: "Tem mais alguma pergunta?", dangerTitle: "Aviso de segurança", play: "Reproduzir", pause: "Pausar", checking: "Verificando a segurança…" },
 };
-for (const l of LANGUAGES) Object.assign(l.ui, EXTRA.en, EXTRA[l.code]);
+// 会话断开待机时的提示
+const STANDBY = {
+  zh: "Ava 待机中 · 说话、点按钮或打字，她就回来",
+  en: "Ava is on standby — speak, tap or type to bring her back",
+  es: "Ava está en espera: habla, toca o escribe para que vuelva",
+  vi: "Ava đang chờ — hãy nói, chạm hoặc gõ để gọi cô ấy",
+  ja: "Ava は待機中です。話す・タップ・入力で戻ります",
+  ko: "Ava 대기 중 — 말하거나 누르거나 입력하면 돌아옵니다",
+  fr: "Ava est en veille — parlez, touchez ou écrivez pour la rappeler",
+  ar: "Ava في وضع الانتظار — تحدث أو اضغط أو اكتب لتعود",
+  hi: "Ava स्टैंडबाय पर है — बोलें, टैप करें या लिखें",
+  pt: "Ava está em espera — fale, toque ou digite para ela voltar",
+};
+for (const l of LANGUAGES) Object.assign(l.ui, EXTRA.en, EXTRA[l.code], { standby: STANDBY[l.code] || STANDBY.en });

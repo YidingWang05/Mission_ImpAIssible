@@ -53,6 +53,12 @@ app.get("/api/config", (_req, res) => {
     persona: { name: PERSONA.name, image: PERSONA.image, avatarId: PERSONA.avatarId, voiceId: PERSONA.voiceId, llmId: PERSONA.llmId },
     languages: LANGUAGES.map(({ code, name, english, greeting, ui, rtl }) => ({ code, name, english, greeting, ui, rtl: !!rtl })),
     demo: { claude: !HAS_CLAUDE, avatar: !HAS_ANAM },
+    // 数字人会话：Anam 每个会话有时长上限（Free 套餐 3 分钟）。前端按“段”续会话，说完就断开待机。
+    session: {
+      limitSeconds: Number(process.env.ANAM_SESSION_LIMIT_SECONDS ?? 180), // 0 = 不限制，不主动续会话
+      idleSeconds: Number(process.env.ANAM_IDLE_SECONDS ?? 4),             // Ava 说完后多久没人接话就断开
+      pauseEachSection: process.env.LESSON_PAUSE_EACH_SECTION === "1",      // 每讲完一段就停下等用户
+    },
   });
 });
 
@@ -328,7 +334,7 @@ app.get("/guides/:file", async (req, res) => {
 // =====================================================================================
 app.post("/api/session-token", async (req, res) => {
   if (!HAS_ANAM) return res.status(503).json({ error: "ANAM_API_KEY 未配置（演示模式）" });
-  const { lang: code, phase = "greet", guideId } = req.body || {};
+  const { lang: code, phase = "greet", guideId, quiet } = req.body || {};
   const lang = langOf(code);
   const base = {
     name: PERSONA.name,
@@ -346,7 +352,10 @@ app.post("/api/session-token", async (req, res) => {
     const tools = guide.safety === "blocked" ? [] : LESSON_TOOLS;
     personaConfig = { ...base, systemPrompt: lessonPrompt(lang, guide), tools, skipGreeting: true };
   } else {
-    personaConfig = { ...base, systemPrompt: greetPrompt(lang), initialMessage: lang.greeting, uninterruptibleGreeting: true };
+    // quiet：待机后重新连上（或从讲解页返回），不再重复说一遍问候语
+    personaConfig = quiet
+      ? { ...base, systemPrompt: greetPrompt(lang), skipGreeting: true }
+      : { ...base, systemPrompt: greetPrompt(lang), initialMessage: lang.greeting, uninterruptibleGreeting: true };
   }
   try {
     const r = await fetch("https://api.anam.ai/v1/auth/session-token", {
