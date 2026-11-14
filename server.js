@@ -21,6 +21,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { LANGUAGES } from "./languages.js";
+import { keysFor, withKey, fetchWithKey, isKeyError } from "./keys.js";
 import { PERSONA, greetPrompt, lessonPrompt, LESSON_TOOLS } from "./persona.js";
 import { DEMO_GUIDE, DEMO_DANGER_GUIDE } from "./demo.js";
 import { TriageSchema, TRIAGE_SYSTEM, blockedGuide, classifyDanger, dangerReply } from "./safety.js";
@@ -41,9 +42,36 @@ app.get("/vendor/anam.js", (_req, res) =>
 
 const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 const ASK_MODEL = process.env.CLAUDE_ASK_MODEL || MODEL; // 问答用的模型，默认和识别相同
-const HAS_CLAUDE = Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
-const HAS_ANAM = Boolean(process.env.ANAM_API_KEY);
-const claude = HAS_CLAUDE ? new Anthropic() : null;
+// 每个服务可以配多个密钥（NAME、NAME_2、NAME_3 …）：额度不足 / 鉴权失败时自动换下一个，见 keys.js
+const CLAUDE_KEYS = keysFor("ANTHROPIC_API_KEY");
+const HAS_CLAUDE = CLAUDE_KEYS.length > 0 || Boolean(process.env.ANTHROPIC_AUTH_TOKEN);
+const HAS_ANAM = keysFor("ANAM_API_KEY").length > 0;
+
+// Claude 客户端：每个密钥一个，按需创建。所有调用都经过 callClaude，所以换密钥对下面的代码是透明的。
+const clients = new Map();
+const clientFor = (key) => clients.get(key) || clients.set(key, new Anthropic({ apiKey: key })).get(key);
+const callClaude = (fn) => (CLAUDE_KEYS.length ? withKey("ANTHROPIC_API_KEY", (key) => fn(clientFor(key))) : fn(new Anthropic()));
+const claude = HAS_CLAUDE && {
+  beta: {
+    messages: {
+      parse: (params) => callClaude((c) => c.beta.messages.parse(params)),
+      create: (params) => callClaude((c) => c.beta.messages.create(params)),
+      // 流式：换密钥重试时要把监听器重新挂到新的流上
+      stream: (params) => {
+        const listeners = [];
+        return {
+          on(event, cb) { listeners.push([event, cb]); return this; },
+          finalMessage: () =>
+            callClaude((c) => {
+              const s = c.beta.messages.stream(params);
+              for (const [event, cb] of listeners) s.on(event, cb);
+              return s.finalMessage();
+            }),
+        };
+      },
+    },
+  },
+};
 const FALLBACK = { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" };
 
 const langOf = (code) => LANGUAGES.find((l) => l.code === code) || LANGUAGES[0];
@@ -358,16 +386,20 @@ app.post("/api/session-token", async (req, res) => {
       : { ...base, systemPrompt: greetPrompt(lang), initialMessage: lang.greeting, uninterruptibleGreeting: true };
   }
   try {
-    const r = await fetch("https://api.anam.ai/v1/auth/session-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.ANAM_API_KEY}` },
-      body: JSON.stringify({ maxSessions: 3, personaConfig }),
-    });
+    // 这个 Anam 账户额度用完 / 密钥失效时，自动换 ANAM_API_KEY_2、_3 …
+    const r = await fetchWithKey("ANAM_API_KEY", (key) =>
+      fetch("https://api.anam.ai/v1/auth/session-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ maxSessions: 3, personaConfig }),
+      }),
+    );
     const data = await r.json();
     if (!r.ok) return res.status(r.status).json({ error: data?.message || "Anam 令牌申请失败" });
     res.json({ sessionToken: data.sessionToken });
   } catch (e) {
-    console.error("session-token", e);
+    console.error("session-token", e?.message || e);
+    if (isKeyError(e)) return res.status(429).json({ error: "所有 Anam 密钥的额度都用完了或已失效" });
     res.status(500).json({ error: "无法连接 Anam" });
   }
 });

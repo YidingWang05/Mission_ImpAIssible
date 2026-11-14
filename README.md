@@ -385,6 +385,10 @@ flowchart LR
 | `CLAUDE_MODEL` | 换 Claude 模型 |
 | `PORT` | 端口，默认 8000 |
 
+**多个密钥自动轮换：** 同一个服务可以放多个密钥（`NAME`、`NAME_2`、`NAME_3` …，见 `.env.example`）。先用第一个，额度不足 / 鉴权失败 / 被限流时自动换下一个。JavaScript 用 `keys.js`（`withKey` / `fetchWithKey`），Python 用 `keyring.py`（`KeyRing`）；Claude、Anam、fal 已经接上，新接的服务（ElevenLabs、Adaption）也请走这两个文件。
+
+**自动改代码的智能体：** `npm run agent -- --prompt AGENT_PROMPT.md --branch tonight-demo` 会在项目旁边另建一个工作区，让 Claude 按任务文件在那个分支上干活。一个 Claude 账户的额度用完时自动换下一个密钥，并接着同一段对话继续；中断后重新运行同一条命令会接着做。它不会 push、不会改 `.env`，默认最多花 40 美元（`--max-usd`）。用法见 `tools/run_agent.mjs` 开头，或 `npm run agent -- --help`。
+
 ⚠️ **`.env` 已写入 `.gitignore`，绝对不要把真实的 key 提交到 GitHub。** 仓库一旦公开，key 会被别人盗用，额度很快被刷光。
 
 ---

@@ -5,12 +5,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "agent": "node tools/run_agent.mjs"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@anam-ai/js-sdk": "^4.29.2",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.325",
     "@anthropic-ai/sdk": "^1.8.0",
     "dotenv": "^18.0.10",
     "express": "^5.3.0",
