@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f2"/><stop offset="1" stop-color="#c9ced4"/></linearGradient>
+    <radialGradient id="dial" cx="0.4" cy="0.35" r="0.8"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#9aa3ad"/></radialGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity=".35"/></filter>
+  </defs>
+  <rect width="1000" height="600" fill="#5b6066"/>
+  <rect x="20" y="120" width="960" height="380" rx="28" fill="url(#bg)"/>
+  <text x="50" y="170" font-family="sans-serif" font-size="22" fill="#55606b" font-weight="700">AQUA WASH  AW-7G</text>
+  <!-- 電源 -->
+  <circle cx="90" cy="300" r="42" fill="#e9ecef" stroke="#7d8790" stroke-width="3" filter="url(#sh)"/>
+  <path d="M90 278 v22 M76 288 a20 20 0 1 0 28 0" stroke="#d33" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <text x="90" y="372" font-family="sans-serif" font-size="22" text-anchor="middle" fill="#333">電源</text>
+  <!-- 表示 -->
+  <rect x="190" y="230" width="250" height="100" rx="10" fill="#1d2a22"/>
+  <text x="315" y="298" font-family="monospace" font-size="54" text-anchor="middle" fill="#7dffa8">0:38</text>
+  <text x="315" y="360" font-family="sans-serif" font-size="18" text-anchor="middle" fill="#555">残り時間</text>
+  <!-- コース ダイヤル -->
+  <g font-family="sans-serif" font-size="19" fill="#333" text-anchor="middle">
+    <text x="590" y="172">標準</text><text x="700" y="218">お急ぎ</text><text x="725" y="310">毛布</text>
+    <text x="695" y="400">槽洗浄</text><text x="485" y="218">おしゃれ着</text><text x="455" y="310">すすぎ</text><text x="480" y="400">脱水のみ</text>
+  </g>
+  <circle cx="590" cy="295" r="95" fill="url(#dial)" stroke="#6b737b" stroke-width="3" filter="url(#sh)"/>
+  <rect x="584" y="205" width="12" height="46" rx="6" fill="#2c6bd6"/>
+  <text x="590" y="460" font-family="sans-serif" font-size="20" text-anchor="middle" fill="#333">コース</text>
+  <!-- 温度 / 脱水 / 予約 -->
+  <g font-family="sans-serif" font-size="21" text-anchor="middle" fill="#222">
+    <rect x="770" y="175" width="90" height="56" rx="12" fill="#fff" stroke="#7d8790" stroke-width="2" filter="url(#sh)"/><text x="815" y="211">温度</text>
+    <rect x="875" y="175" width="90" height="56" rx="12" fill="#fff" stroke="#7d8790" stroke-width="2" filter="url(#sh)"/><text x="920" y="211">脱水</text>
+    <rect x="770" y="250" width="90" height="56" rx="12" fill="#fff" stroke="#7d8790" stroke-width="2" filter="url(#sh)"/><text x="815" y="286">予約</text>
+    <rect x="875" y="250" width="90" height="56" rx="12" fill="#fff" stroke="#7d8790" stroke-width="2" filter="url(#sh)"/><text x="920" y="286">ロック</text>
+  </g>
+  <!-- スタート -->
+  <rect x="770" y="340" width="195" height="100" rx="18" fill="#2c6bd6" filter="url(#sh)"/>
+  <path d="M808 370 l0 40 l30 -20 z" fill="#fff"/><rect x="848" y="370" width="8" height="40" fill="#fff"/><rect x="862" y="370" width="8" height="40" fill="#fff"/>
+  <text x="918" y="385" font-family="sans-serif" font-size="20" text-anchor="middle" fill="#fff">スタート</text>
+  <text x="918" y="412" font-family="sans-serif" font-size="17" text-anchor="middle" fill="#fff">一時停止</text>
+</svg>
