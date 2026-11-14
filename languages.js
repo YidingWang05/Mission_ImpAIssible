@@ -135,3 +135,18 @@ export const LANGUAGES = [
     },
   },
 ];
+
+// 讲解播放器 / 安全红线用到的补充文案（没有翻译的语言退回英文）
+const EXTRA = {
+  zh: { more: "还有其他问题吗？", dangerTitle: "安全提醒", play: "播放", pause: "暂停", checking: "正在做安全检查…" },
+  en: { more: "Any other questions?", dangerTitle: "Safety notice", play: "Play", pause: "Pause", checking: "Running a safety check…" },
+  es: { more: "¿Tienes alguna otra pregunta?", dangerTitle: "Aviso de seguridad", play: "Reproducir", pause: "Pausa", checking: "Comprobando la seguridad…" },
+  vi: { more: "Bạn còn câu hỏi nào khác không?", dangerTitle: "Cảnh báo an toàn", play: "Phát", pause: "Tạm dừng", checking: "Đang kiểm tra an toàn…" },
+  ja: { more: "ほかに質問はありますか？", dangerTitle: "安全上のご注意", play: "再生", pause: "一時停止", checking: "安全確認をしています…" },
+  ko: { more: "다른 질문이 있으신가요?", dangerTitle: "안전 안내", play: "재생", pause: "일시정지", checking: "안전 확인 중…" },
+  fr: { more: "Avez-vous d'autres questions ?", dangerTitle: "Consigne de sécurité", play: "Lecture", pause: "Pause", checking: "Vérification de sécurité…" },
+  ar: { more: "هل لديك أسئلة أخرى؟", dangerTitle: "تنبيه أمان", play: "تشغيل", pause: "إيقاف مؤقت", checking: "جارٍ فحص الأمان…" },
+  hi: { more: "क्या आपका कोई और सवाल है?", dangerTitle: "सुरक्षा सूचना", play: "चलाएँ", pause: "रोकें", checking: "सुरक्षा जाँच हो रही है…" },
+  pt: { more: "Tem mais alguma pergunta?", dangerTitle: "Aviso de segurança", play: "Reproduzir", pause: "Pausar", checking: "Verificando a segurança…" },
+};
+for (const l of LANGUAGES) Object.assign(l.ui, EXTRA.en, EXTRA[l.code]);

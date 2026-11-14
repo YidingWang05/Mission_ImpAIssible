@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fafafa"/><stop offset="1" stop-color="#d9dde1"/></linearGradient>
+    <radialGradient id="knob" cx="0.4" cy="0.35" r="0.8"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#8f99a3"/></radialGradient>
+  </defs>
+  <rect width="1000" height="600" fill="#6a6f75"/>
+  <rect x="60" y="40" width="880" height="520" rx="24" fill="url(#body)" stroke="#aab1b8" stroke-width="3"/>
+  <text x="100" y="105" font-family="sans-serif" font-size="30" fill="#3d4750" font-weight="700">VEXA  CombiHeat 28</text>
+  <text x="100" y="140" font-family="sans-serif" font-size="18" fill="#6b7580">GAS CONDENSING COMBINATION BOILER</text>
+  <!-- display -->
+  <rect x="380" y="200" width="240" height="120" rx="10" fill="#10201c" stroke="#55606b" stroke-width="4"/>
+  <text x="500" y="280" text-anchor="middle" font-family="monospace" font-size="64" fill="#7dffb0">1.2</text>
+  <text x="590" y="305" text-anchor="end" font-family="sans-serif" font-size="16" fill="#7dffb0">bar</text>
+  <!-- flame icon -->
+  <path d="M500 345 c-18 22 -26 34 -26 50 a26 26 0 0 0 52 0 c0 -16 -8 -28 -26 -50z" fill="#ff7a1a"/>
+  <path d="M500 372 c-8 10 -12 16 -12 24 a12 12 0 0 0 24 0 c0 -8 -4 -14 -12 -24z" fill="#ffd34d"/>
+  <!-- CH knob -->
+  <circle cx="210" cy="290" r="62" fill="url(#knob)" stroke="#6b7580" stroke-width="3"/>
+  <rect x="206" y="236" width="8" height="40" rx="4" fill="#c0392b"/>
+  <text x="210" y="390" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#3d4750" font-weight="700">CH  HEATING</text>
+  <!-- DHW knob -->
+  <circle cx="790" cy="290" r="62" fill="url(#knob)" stroke="#6b7580" stroke-width="3"/>
+  <rect x="786" y="236" width="8" height="40" rx="4" fill="#2471a3"/>
+  <text x="790" y="390" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#3d4750" font-weight="700">DHW  HOT WATER</text>
+  <!-- buttons -->
+  <rect x="330" y="450" width="120" height="54" rx="12" fill="#e9ecef" stroke="#7d8790" stroke-width="3"/>
+  <text x="390" y="484" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#3d4750" font-weight="700">RESET</text>
+  <rect x="550" y="450" width="120" height="54" rx="12" fill="#e9ecef" stroke="#7d8790" stroke-width="3"/>
+  <text x="610" y="484" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#3d4750" font-weight="700">MODE</text>
+  <!-- gas warning label -->
+  <rect x="720" y="70" width="180" height="60" rx="8" fill="#ffd34d" stroke="#3d4750" stroke-width="3"/>
+  <text x="810" y="108" text-anchor="middle" font-family="sans-serif" font-size="22" fill="#3d4750" font-weight="800">⚠ GAS</text>
+</svg>

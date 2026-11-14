@@ -1,7 +1,8 @@
 // 家电小老师 —— 前端
 // 输入：① 家电照片 ② 语言 ③ 用户的疑问
-// 流程：Ava 打招呼 → 拍照（+ 可选疑问）→ 服务端识别型号并联网查资料，生成步骤 JSON（只用 ①②）
-//      → 讲解：照片标注 + Ava 口型同步讲解 + 双语字幕；Ava 先回答 ③，然后每步停下来等用户说话
+// 流程：Ava 打招呼 → 拍照（+ 可选疑问）→ 服务端先做安全红线检查，再识别型号并联网查资料，生成步骤 JSON（只用 ①②）
+//      → 讲解：像视频一样连续播放（每一步一个章节，进度条上有步骤标记）；
+//        用户一提问就自动暂停 → 简短回答 → 按问题类型：播完整讲解 / 放大按钮 / 只播相关的那几步 / 继续播放
 const $ = (s) => document.querySelector(s);
 
 const state = {
@@ -19,6 +20,20 @@ const state = {
   busy: false,
   gen: 0,              // 每次切换动作 +1，旧的异步流程看到不一致就退出
 };
+
+// 讲解播放器：把逐步讲解当成一段带步骤标记的视频。跳转、重播都只是换章节，不重新生成任何内容。
+const player = {
+  playing: false,      // 正在连续播放
+  range: null,         // { to }：只播到第几步（0 起）就停下；null = 一直播到结束
+  cursor: 0,           // 继续播放时从第几步开始
+  after: null,         // 回答完问题后做什么：{ kind: "resume" } | { kind: "play", from, to }
+  asking: false,       // 因为用户提问而暂停中
+  chapters: [],        // 步骤时间标记 [{ step, start, end, ready }]
+  timer: 0,
+};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const lessonActive = () => $("#screen-lesson").classList.contains("active");
+const blocked = () => state.guide?.safety === "blocked"; // 越过安全红线：没有步骤，只有安全提醒
 
 // ------------------------------------------------------------------ 启动
 init();
@@ -47,11 +62,17 @@ async function init() {
     $("#demo-note").hidden = false;
   }
   $("#btn-sample").hidden = !d.claude;
+  $("#btn-sample-danger").hidden = !d.claude;
 
   $("#btn-start").onclick = start;
   $("#photo").onchange = onPhoto;
   $("#btn-analyze").onclick = () => analyze();
-  $("#btn-sample").onclick = () => analyze({ sample: true });
+  $("#btn-sample").onclick = () => analyze({ sample: "washer" });
+  $("#btn-sample-danger").onclick = () => analyze({ sample: "boiler" });
+  $("#btn-play").onclick = togglePlay;
+  // 开始打字提问就自动暂停；什么都没问就接着播
+  $("#ask").oninput = () => { if ($("#ask").value.trim() && lessonActive()) pauseForQuestion(); };
+  $("#ask").onblur = () => { if (!$("#ask").value.trim() && player.asking && state.mode !== "thinking" && state.mode !== "speaking") runAfter(); };
   $("#btn-back").onclick = backToCapture;
   $("#btn-rec").onclick = toggleRecording;
   document.querySelectorAll(".chip").forEach((b) => (b.onclick = () => command(b.dataset.cmd, { fromTap: true })));
@@ -106,7 +127,8 @@ async function start() {
 async function connectAvatar(opts) {
   const make = (Cls) => {
     const a = new Cls();
-    a.onUserText = onFallbackUserText;
+    a.onUserText = userSays;
+    a.onUserSpeech = onUserSpeech;
     a.onListenChange = renderListen;
     a.onTool = onTool;
     a.onFreeSpeech = onFreeSpeech;
@@ -182,11 +204,13 @@ async function analyze({ sample = false } = {}) {
         lang: state.lang.code,
         image: sample ? null : state.photo?.base64,
         mediaType: state.photo?.mediaType,
+        sample: sample || undefined,
       }),
     });
     let result = null;
     for await (const ev of ndjson(r)) {
-      if (ev.type === "search") logResearch(`🔎 ${ui.searching}: ${ev.query}`);
+      if (ev.type === "status" && ev.stage === "safety") logResearch(`🛡️ ${ui.checking}`);
+      else if (ev.type === "search") logResearch(`🔎 ${ui.searching}: ${ev.query}`);
       else if (ev.type === "sources") ev.sources.slice(0, 5).forEach((s) => logResearch(`📄 ${s.title}`));
       else if (ev.type === "error") throw new Error(ev.error);
       else if (ev.type === "result") result = ev;
@@ -247,7 +271,19 @@ async function enterLesson(imgSrc) {
   placeAvatar($("#pip-slot"));
   state.history = [];
   state.focusId = null;
+  state.step = -1;
+  $(".lesson").classList.toggle("blocked", blocked());
+  Object.assign(player, { playing: false, range: null, cursor: 0, after: null, asking: false, chapters: [] });
+  $("#chapter-track").innerHTML = "";
+  hideDanger();
+  clearZoom();
   drawOverlay({});
+  // 步骤时间标记（真实视频做好前由服务端按讲解词长度估算）
+  if (!blocked() && g.steps.length) {
+    try { player.chapters = (await fetch(`/api/render/${g.id}`).then((r) => r.json())).chapters || []; } catch {}
+    if (player.chapters.length !== g.steps.length) player.chapters = g.steps.map((_, i) => ({ step: i + 1, start: i, end: i + 1, ready: true }));
+  }
+  renderChapters();
 
   // 讲解阶段换一个“知道这台家电”的数字人会话（步骤 JSON + 客户端工具）
   if (state.avatar instanceof AnamAvatar) {
@@ -258,6 +294,17 @@ async function enterLesson(imgSrc) {
   if (!g.recognized) {
     await speakLine(g.intro_native, g.intro_en);
     return backToCapture();
+  }
+  if (blocked()) {
+    // 安全红线：不讲任何步骤，只说明原因 + 建议联系厂家官方售后 / 房东
+    const gen = ++state.gen;
+    $("#progress").textContent = "⚠️";
+    $("#step-chip").textContent = "";
+    $("#action").innerHTML = "";
+    showDanger(g.safety_message_native, g.safety_message_en);
+    await speakLine(g.safety_message_native, g.safety_message_en);
+    if (gen === state.gen) state.mode = "waiting";
+    return;
   }
   goto(-1);
 }
@@ -272,8 +319,11 @@ function fitStage() {
 
 async function backToCapture() {
   state.gen++;
+  clearTimeout(player.timer);
+  Object.assign(player, { playing: false, range: null, after: null, asking: false });
   state.avatar?.interrupt();
   stopRecording();
+  clearZoom();
   show("screen-capture");
   placeAvatar($("#hero-slot-2"));
   if (state.avatar instanceof AnamAvatar) state.avatar = await connectAvatar({ phase: "greet", quiet: true });
@@ -281,10 +331,18 @@ async function backToCapture() {
 
 const steps = () => state.guide.steps;
 
-async function goto(i) {
+// 播放第 i 步（-1 = 开场白，steps.length = 结束语）。播完自动接下一步，直到结束或播完 player.range。
+async function goto(i, { keepRange = false } = {}) {
   const g = state.guide;
+  if (blocked()) return;
   const gen = ++state.gen;
+  clearTimeout(player.timer);
+  if (!keepRange) player.range = null;
+  Object.assign(player, { playing: true, after: null, asking: false });
+  clearZoom();
+  hideDanger();
   state.step = Math.max(-1, Math.min(i, steps().length));
+  player.cursor = Math.max(0, state.step);
   state.focusId = null;
   const ui = state.lang.ui;
   const total = steps().length;
@@ -296,28 +354,162 @@ async function goto(i) {
     : "";
   renderStepList();
   drawOverlay({ target: s?.button_id || null });
+  renderChapters(0);
 
-  if (state.step === -1) await speakLine(g.intro_native, g.intro_en);
-  else if (s) await speakLine(s.narration_native, s.narration_en);
-  else await speakLine(g.closing_native, g.closing_en);
+  let result;
+  if (state.step === -1) result = await speakLine(g.intro_native, g.intro_en);
+  else if (s) result = await speakLine(s.narration_native, s.narration_en, renderChapters);
+  else result = await speakLine(g.closing_native, g.closing_en);
   if (gen !== state.gen) return;
+  // 用户开口把讲解打断了 → 当作提问暂停，回答完从这一步重新播
+  if (result === "interrupted") return pauseForQuestion();
+  player.cursor = state.step + 1;
 
   if (state.step < 0) {
-    // 开场白之后：先回答用户拍照时提的疑问，再进入第 1 步
+    // 开场白之后：先回答用户拍照时提的疑问（回答里会决定播哪几步），否则从第 1 步开始
     if (state.question) {
       const q = state.question;
       state.question = "";
-      await askAvatar(q);
-      // 回答过程中会高亮按钮（gen 会变），只要用户没有跳到别的步骤就继续
-      if (state.step !== -1 || !$("#screen-lesson").classList.contains("active")) return;
+      return answerQuestion(q);
     }
     return goto(0);
   }
+  if (!s) { player.playing = false; return waitForUser(); } // 结束语说完
+  renderChapters(1);
+  if (player.range && state.step >= player.range.to) {
+    // 这个问题需要的范围播完了：停下，问还有没有别的问题（用户说“继续”就接着往下播）
+    player.range = null;
+    player.playing = false;
+    renderChapters();
+    await speakLine(state.lang.ui.more, "Any other questions?");
+    if (gen !== state.gen) return;
+    return waitForUser();
+  }
+  await sleep(500);
+  if (gen !== state.gen) return;
+  goto(state.step + 1, { keepRange: true });
+}
+
+// ---------- 播放器：步骤标记 / 暂停 / 继续 / 只播一段 ----------
+function renderChapters(frac) {
+  const ch = player.chapters;
+  $("#chapters").hidden = !ch.length || blocked();
+  const btn = $("#btn-play");
+  btn.textContent = player.playing ? "⏸" : "▶";
+  btn.title = player.playing ? state.lang.ui.pause : state.lang.ui.play;
+  btn.setAttribute("aria-label", btn.title);
+  const track = $("#chapter-track");
+  if (track.childElementCount !== ch.length) {
+    track.innerHTML = "";
+    const mmss = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+    ch.forEach((c, i) => {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "seg";
+      el.style.flexGrow = Math.max(1, (c.end ?? 1) - (c.start ?? 0)); // 段的宽度按这一步的时长
+      el.innerHTML = `<i></i><span>${i + 1}</span>`;
+      el.title = `${mmss(c.start ?? 0)} · ${steps()[i]?.action_native || ""}`;
+      el.onclick = () => { state.avatar.interrupt(); goto(i); }; // 跳到这一步 / 重播这一步
+      track.append(el);
+    });
+  }
+  [...track.children].forEach((el, i) => {
+    el.classList.toggle("ready", ch[i].ready !== false);
+    el.classList.toggle("done", i < state.step);
+    el.classList.toggle("cur", i === state.step);
+    el.classList.toggle("in-range", !!player.range && i >= state.step && i <= player.range.to);
+    if (i !== state.step) el.firstChild.style.width = "";
+    else if (frac !== undefined) el.firstChild.style.width = `${Math.round(frac * 100)}%`;
+  });
+}
+
+function togglePlay() {
+  if (!state.guide || blocked()) return;
+  if (!player.playing) return resume();
+  state.gen++;
+  clearTimeout(player.timer);
+  Object.assign(player, { playing: false, after: null, asking: false });
+  state.avatar.interrupt();
   waitForUser();
 }
 
+// 从暂停的地方继续（被打断的那一步从头重播）
+function resume() { goto(Math.min(player.cursor, steps().length), { keepRange: true }); }
+
+// 只播第 from 步到第 to 步（0 起），播完停下。用的是已有的章节，不生成新内容。
+function playRange(from, to) {
+  player.range = { to };
+  goto(from, { keepRange: true });
+}
+
+// 用户开始提问（说话 / 打字 / 点按钮）：自动暂停，并记下回答完要继续播放
+function pauseForQuestion() {
+  if (!state.guide || !lessonActive() || player.asking) return;
+  player.asking = true;
+  if (player.playing) {
+    player.playing = false;
+    player.after = { kind: "resume" };
+    state.gen++; // 取消“自动播下一步”
+    state.avatar.interrupt();
+  }
+  renderChapters();
+}
+
+// 回答完之后：继续播放 / 只播某几步 / 停在原地
+function runAfter() {
+  clearTimeout(player.timer);
+  const a = player.after;
+  player.after = null;
+  player.asking = false;
+  clearZoom();
+  if (!state.guide || !lessonActive()) return;
+  if (blocked()) { state.mode = "waiting"; return; }
+  if (a?.kind === "play") return playRange(a.from, a.to);
+  if (a?.kind === "resume") return resume();
+  drawOverlay({ target: steps()[state.step]?.button_id });
+  waitForUser();
+}
+
+// 真实数字人：用户一开口就暂停；说完后如果 Ava 一直没反应（比如只是环境噪音），过一会儿自己继续
+function onUserSpeech(kind) {
+  if (!state.guide || !lessonActive()) return;
+  clearTimeout(player.timer);
+  if (kind === "start") return pauseForQuestion();
+  if (player.asking) player.timer = setTimeout(() => { if (player.asking && !free.text && state.mode !== "thinking") runAfter(); }, 9000);
+}
+
+// ---------- 放大照片上的某个按钮（看不懂面板上的字时用） ----------
+function zoomTo(id) {
+  const b = state.guide.buttons.find((x) => x.id === id);
+  if (!b) return;
+  const s = Math.max(1.5, Math.min(3, 1000 / (Math.max(b.box.w, 40) * 4), 1000 / (Math.max(b.box.h, 40) * 3.5))); // 按钮约占画面宽度的 1/4
+  const cx = (b.box.x + b.box.w / 2) / 10, cy = (b.box.y + b.box.h / 2) / 10; // 按钮中心（百分比）
+  const tx = Math.min(0, Math.max(100 - 100 * s, 50 - cx * s));                // 把按钮移到画面中间，但不露出黑边
+  const ty = Math.min(0, Math.max(100 - 100 * s, 50 - cy * s));
+  $("#zoomer").style.transform = `translate(${tx}%, ${ty}%) scale(${s})`;
+  $("#label-card").innerHTML = `<b>${esc(b.panel_text)}</b><span>＝</span>${esc(b.name_native)}${b.name_en !== b.name_native ? `<small>${esc(b.name_en)}</small>` : ""}`;
+  $("#label-card").hidden = false;
+  $("#photo-wrap").classList.add("zoomed");
+}
+
+function clearZoom() {
+  $("#zoomer").style.transform = "";
+  $("#label-card").hidden = true;
+  $("#photo-wrap").classList.remove("zoomed");
+}
+
+// ---------- 安全提醒 ----------
+function showDanger(native, en) {
+  $("#danger-title").textContent = state.lang.ui.dangerTitle;
+  $("#danger-native").textContent = native;
+  $("#danger-en").textContent = en && en !== native ? en : "";
+  $("#danger").hidden = false;
+}
+function hideDanger() { $("#danger").hidden = true; }
+
 function waitForUser() {
   state.mode = "waiting";
+  renderChapters();
   const ui = state.lang.ui;
   $("#hint").textContent = `${ui.hint} “${ui.next}” · “${ui.repeat}” · “${ui.what}”`;
   $(".chips").classList.add("waiting");
@@ -396,7 +588,7 @@ function renderBadge(b, answer) {
     el = document.createElement("div");
     el.id = "num-badge";
     el.style.cssText = "position:absolute;transform:translate(-50%,-50%);font:800 18px/1 system-ui;color:#111;pointer-events:none;z-index:1";
-    $("#photo-wrap").append(el);
+    $("#zoomer").append(el);
   }
   if (!b || answer || state.step < 0) { el.textContent = ""; return; }
   const img = $("#stage-img");
@@ -413,13 +605,16 @@ function placePip(cx, cy) {
 }
 
 // ---------- 说话 + 字幕 ----------
-async function speakLine(native, en) {
+async function speakLine(native, en, onFrac) {
   state.mode = "speaking";
   $(".chips").classList.remove("waiting");
   $("#hint").textContent = "";
   setSubs(native, en, 0);
   state.history.push({ role: "assistant", content: native });
-  const result = await say(native, (spoken) => setSubs(native, en, spoken));
+  const result = await say(native, (spoken) => {
+    setSubs(native, en, spoken);
+    onFrac?.(Math.min(1, spoken / Math.max(1, native.length)));
+  });
   if (result === "done" || result === "timeout") setSubs(native, en, native.length);
   return result;
 }
@@ -438,7 +633,8 @@ function setSubs(native, en, spoken) {
 // Ava 自己组织语言的回答（问按钮、问问题）：字幕跟着说，说完补英文翻译
 let free = { text: "", gen: -1 };
 function onFreeSpeech(chunk, end) {
-  if (!$("#screen-lesson").classList.contains("active")) return;
+  if (!lessonActive()) return;
+  clearTimeout(player.timer);
   if (free.gen !== state.gen) { free = { text: "", gen: state.gen }; state.mode = "speaking"; $(".chips").classList.remove("waiting"); }
   free.text += chunk;
   setSubs(free.text, "", free.text.length);
@@ -454,12 +650,11 @@ function onFreeSpeech(chunk, end) {
       .then(({ en }) => { if ($("#sub-native").textContent === said) setSubs(said, en, said.length); })
       .catch(() => {});
   }
-  // 说完后恢复当前步骤的标注，继续等用户
-  setTimeout(() => {
-    if (gen !== state.gen || state.mode === "thinking" || state.step < 0) return;
-    drawOverlay({ target: steps()[state.step]?.button_id });
-    waitForUser();
-  }, 1500);
+  // 说完后：继续播放 / 只播相关的那几步 / 停在原地（见 runAfter）
+  player.timer = setTimeout(() => {
+    if (gen !== state.gen || state.mode === "thinking") return;
+    runAfter();
+  }, 1200);
 }
 
 // ------------------------------------------------------------------ 4. 边看边问
@@ -478,50 +673,121 @@ function onTool(name, args) {
     case "highlight_button": {
       const id = args.button_id;
       if (!state.guide.buttons.some((b) => b.id === id)) return `Unknown button id ${id}`;
+      pauseForQuestion();
       state.gen++;
       state.focusId = id;
       drawOverlay({ target: steps()[state.step]?.button_id, answer: id });
-      return `Highlighted ${id} on the photo.`;
+      zoomTo(id);
+      return `Highlighted and zoomed in on ${id}. Explain it in one or two sentences; the video resumes by itself afterwards.`;
     }
+    case "pause_video":
+      if (player.playing) togglePlay();
+      return "Paused. Stay silent.";
+    case "resume_video":
+      // 等 Ava 把话说完再继续；她什么都不说的话，稍后自己继续
+      player.asking = true;
+      player.after ||= { kind: "resume" };
+      clearTimeout(player.timer);
+      player.timer = setTimeout(() => { if (!free.text) runAfter(); }, 1500);
+      return "Resuming. Stay silent.";
+    case "ask_tutor":
+      return askTool(String(args.question || ""));
   }
   return "unknown tool";
 }
 
-// 输入框打字：真实数字人当作用户说的话交给 Ava；演示模式走本地问答
-function userSays(text) {
-  if (state.avatar instanceof AnamAvatar) {
-    state.history.push({ role: "user", content: text });
-    state.avatar.interrupt();
-    state.avatar.sendText(text);
-  } else onFallbackUserText(text);
+// /api/ask：只发 tutorial_id + 问题 + 当前在第几步（不发照片，也不发完整说明）
+async function ask(question) {
+  const r = await fetch("/api/ask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      tutorial_id: state.guide.id,
+      question,
+      current_step: Math.max(1, Math.min(state.step + 1, Math.max(1, steps().length))),
+      language: state.lang.code,
+    }),
+  });
+  if (!r.ok) throw new Error(`ask ${r.status}`);
+  return r.json();
 }
 
-// 讲解开始时回答用户拍照时提的疑问
-async function askAvatar(question) {
-  if (state.avatar instanceof AnamAvatar) {
-    state.avatar.sendText(question);
-    await state.avatar.waitFreeSpeech(45000);
-  } else await askDemo(question);
+// 按 /api/ask 的结果操作画面，并记下回答说完后要做什么
+//   danger            → 显示安全提醒，停在原地
+//   play（1..N）      → 不会用这台家电：播完整讲解
+//   play（a..b）      → 不懂某个功能：只播讲这个功能的那几步
+//   zoom              → 看不懂标签：放大照片上的那个按钮
+//   answer_only/unsure → 回答完继续播放
+function applyAnswer(a) {
+  const id = state.guide.buttons.some((b) => b.id === a.highlight_button) ? a.highlight_button : null;
+  if (id) state.focusId = id;
+  drawOverlay({ target: steps()[state.step]?.button_id, answer: id });
+  if (a.zoom && id) zoomTo(id);
+  if (a.type === "danger") { showDanger(a.answer_native, a.answer_en); player.after = null; }
+  else if (a.type === "play") player.after = { kind: "play", from: a.play_from - 1, to: a.play_to - 1 };
+  else if (!a.resume) player.after = null;
 }
 
-// 演示数字人：常用指令本地识别，其余走 /api/ask（示例问答）
+// Ava（真实数字人）转来的问题：查到答案后把要说的话交还给她，说完由 onFreeSpeech → runAfter 接着播
+async function askTool(question) {
+  pauseForQuestion();
+  clearTimeout(player.timer);
+  state.gen++;
+  state.mode = "thinking";
+  renderListen("thinking");
+  let a = null;
+  try { a = await ask(question); } catch (e) { console.error(e); }
+  state.mode = "idle";
+  renderListen(state.avatar.listening ? "on" : "off");
+  if (!a) return "The lookup failed. Tell the user you are not sure and suggest the official manual.";
+  applyAnswer(a);
+  return `Say exactly this to the user and nothing else: "${a.answer_native}"`;
+}
+
+// 打字提问、拍照时写的疑问、演示模式的语音：直接问 /api/ask，由 Ava 照念回答
+async function answerQuestion(question) {
+  if (!state.guide) return;
+  pauseForQuestion();
+  state.avatar.interrupt();
+  const gen = ++state.gen;
+  clearTimeout(player.timer);
+  state.mode = "thinking";
+  renderListen("thinking");
+  let a = null;
+  try { a = await ask(question); } catch (e) { console.error(e); }
+  if (gen !== state.gen) return;
+  state.mode = "idle";
+  renderListen(state.avatar.listening ? "on" : "off");
+  if (!a) return runAfter();
+  if (a.nav) return command({ next: "next", previous: "prev", repeat: "repeat" }[a.nav]);
+  applyAnswer(a);
+  const result = a.answer_native ? await speakLine(a.answer_native, a.answer_en) : "done";
+  if (gen !== state.gen || result === "interrupted") return; // 用户又开口了：等下一轮回答
+  await sleep(a.zoom ? 1500 : 400);
+  if (gen !== state.gen) return;
+  runAfter();
+}
+
+// 打字输入（以及演示模式的语音识别）：常用指令本地识别，其余走 /api/ask
 const QUICK = {
-  next: /下一步|下一个|继续|好了|做好了|完成了|\bnext\b|\bcontinue\b|\bdone\b|siguiente|continúa|tiếp|次へ|つぎ|次|다음|suivant|التالي|अगला|próximo|continua/i,
+  resume: /^(继续|接着|播放|continue|go on|resume|play|sigue|continúa|tiếp tục|続けて|계속|continue[zr]?|تابع|जारी|continua)/i,
+  next: /下一步|下一个|好了|做好了|完成了|\bnext\b|\bdone\b|siguiente|tiếp|次へ|つぎ|次|다음|suivant|التالي|अगला|próximo/i,
   repeat: /再说|再讲|重复|没听清|再来一遍|\bagain\b|\brepeat\b|otra vez|repite|nói lại|もう一度|もういちど|다시|répète|encore|أعد|फिर से|repete|de novo/i,
   prev: /上一步|上一个|返回|\bback\b|previous|anterior|quay lại|前へ|もどる|이전|précédent|السابق|पिछला/i,
 };
 
-function onFallbackUserText(text) {
-  text = text.trim();
-  if (!text || !state.guide || !$("#screen-lesson").classList.contains("active")) return;
+function userSays(text) {
+  text = String(text || "").trim();
+  if (!text || !state.guide || !lessonActive()) return;
   state.history.push({ role: "user", content: text });
-  if (text.length <= 14) for (const [cmd, re] of Object.entries(QUICK)) if (re.test(text)) return command(cmd);
-  askDemo(text).then((done) => done && waitForUser());
+  if (text.length <= 14 && !blocked()) for (const [cmd, re] of Object.entries(QUICK)) if (re.test(text)) return command(cmd);
+  answerQuestion(text);
 }
 
 async function command(cmd, { fromTap = false } = {}) {
-  if (!state.guide) return;
+  if (!state.guide || blocked() || !cmd) return;
   state.avatar.interrupt();
+  if (cmd === "resume") return resume();
   if (cmd === "next") return goto(Math.min(state.step + 1, steps().length));
   if (cmd === "prev") return goto(Math.max(0, state.step - 1));
   if (cmd === "repeat") return goto(state.step);
@@ -537,48 +803,18 @@ async function command(cmd, { fromTap = false } = {}) {
 async function explainButton(id) {
   const b = state.guide.buttons.find((x) => x.id === id);
   if (!b) return;
+  pauseForQuestion();
   state.avatar.interrupt();
   const gen = ++state.gen;
+  clearTimeout(player.timer);
   state.focusId = id;
   drawOverlay({ target: steps()[state.step]?.button_id, answer: id });
-  await speakLine(`${b.name_native}（${b.panel_text}）：${b.function_native}`, `${b.name_en} (${b.panel_text}): ${b.function_en}`);
+  zoomTo(id);
+  const result = await speakLine(`${b.name_native}（${b.panel_text}）：${b.function_native}`, `${b.name_en} (${b.panel_text}): ${b.function_en}`);
+  if (gen !== state.gen || result === "interrupted") return;
+  await sleep(1200);
   if (gen !== state.gen) return;
-  drawOverlay({ target: steps()[state.step]?.button_id });
-  waitForUser();
-}
-
-// 返回 true 表示回答完毕、可以继续等待用户
-async function askDemo(question) {
-  state.avatar.interrupt();
-  const gen = ++state.gen;
-  state.mode = "thinking";
-  renderListen("thinking");
-  try {
-    const a = await fetch("/api/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        lang: state.lang.code, question, guide: state.guide,
-        stepIndex: Math.max(0, Math.min(state.step, steps().length - 1)), focusButtonId: state.focusId,
-      }),
-    }).then((r) => r.json());
-    if (gen !== state.gen) return false;
-    state.mode = "idle";
-    renderListen(state.avatar.listening ? "on" : "off");
-    if (a.intent === "next") { goto(state.step + 1); return false; }
-    if (a.intent === "previous") { goto(Math.max(0, state.step - 1)); return false; }
-    if (a.intent === "repeat") { goto(state.step); return false; }
-    if (a.button_id) state.focusId = a.button_id;
-    drawOverlay({ target: steps()[state.step]?.button_id, answer: a.button_id });
-    await speakLine(a.reply_native, a.reply_en);
-    if (gen !== state.gen) return false;
-    drawOverlay({ target: steps()[state.step]?.button_id });
-    return true;
-  } catch (e) {
-    console.error(e);
-    state.mode = "idle";
-    return true;
-  }
+  runAfter();
 }
 
 function renderListen(kind) {
@@ -616,7 +852,7 @@ class AnamAvatar {
     const c = (this.#client = createClient(sessionToken));
     // 客户端工具必须在开始推流前注册
     if (phase === "lesson") {
-      for (const name of ["next_step", "previous_step", "repeat_step", "go_to_step", "highlight_button"]) {
+      for (const name of ["next_step", "previous_step", "repeat_step", "go_to_step", "highlight_button", "pause_video", "resume_video", "ask_tutor"]) {
         c.registerToolCallHandler(name, { onStart: async (p) => this.onTool?.(name, p.arguments || {}) });
       }
     }
@@ -629,8 +865,8 @@ class AnamAvatar {
     c.addListener(AnamEvent.AUDIO_STREAM_STARTED, (stream) => (recorder.audioStream = stream));
     c.addListener(AnamEvent.MIC_PERMISSION_GRANTED, () => { this.listening = true; this.onListenChange?.("on"); });
     c.addListener(AnamEvent.MIC_PERMISSION_DENIED, () => { this.listening = false; this.onListenChange?.("off"); });
-    c.addListener(AnamEvent.USER_SPEECH_STARTED, () => this.onListenChange?.("hear"));
-    c.addListener(AnamEvent.USER_SPEECH_ENDED, () => this.onListenChange?.(this.listening ? "on" : "off"));
+    c.addListener(AnamEvent.USER_SPEECH_STARTED, () => { this.onListenChange?.("hear"); this.onUserSpeech?.("start"); });
+    c.addListener(AnamEvent.USER_SPEECH_ENDED, () => { this.onListenChange?.(this.listening ? "on" : "off"); this.onUserSpeech?.("end"); });
     c.addListener(AnamEvent.MESSAGE_STREAM_EVENT_RECEIVED, (ev) => {
       if (ev.role !== "persona") return;
       const text = stripCues(ev.content || "");
@@ -720,11 +956,14 @@ class FallbackAvatar {
       u.voice = speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith(this.#lang)) || null;
       u.lang = u.voice?.lang || this.#lang;
       u.rate = 0.95;
-      const timer = setTimeout(() => this.#done("timeout"), 3000 + text.length * 250);
-      this.#pending = { resolve, timer };
-      u.onboundary = (e) => onProgress?.(e.charIndex + (e.charLength || 1));
-      u.onend = () => this.#done("done");
-      u.onerror = () => this.#done("error");
+      // 被取消的上一句话，它的 onend / onerror 会晚一点才触发：只认属于这一句的事件，否则会把新的一句提前结束
+      const mine = { resolve };
+      const finish = (reason) => this.#pending === mine && this.#done(reason);
+      mine.timer = setTimeout(() => finish("timeout"), 3000 + text.length * 250);
+      this.#pending = mine;
+      u.onboundary = (e) => this.#pending === mine && onProgress?.(e.charIndex + (e.charLength || 1));
+      u.onend = () => finish("done");
+      u.onerror = () => finish("error");
       $("#avatar").classList.add("speaking");
       speechSynthesis.speak(u);
     });

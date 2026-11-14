@@ -217,6 +217,23 @@ sequenceDiagram
 - 做什么：服务器用 `tutorial_id` 取出完整说明，**只把精简目录发给模型**：每个按钮的名字和作用、每一步的一句话概要。讲解词全文、资料链接都不发，照片也不发。模型判断问题属于哪一类，返回很短的结果。说明里找不到答案时，诚实地说"我不确定"，不编造步骤。
 - 输出：见 7.3。
 
+**处理顺序（`details_instruction` 分支已实现）：**
+
+1. **先过安全红线**（`safety.js`）：设备本身被拦截，或问题涉及维修、拆机、燃气、电路、冒烟起火 → **不交给模型、不直接回答**，返回固定的多语言话术：建议联系厂家官方售后或房东（燃气再加紧急电话）。
+2. **再判断问题类型**（`brain.js`，没有 Claude 时用本地规则）：
+
+| `intent` | 用户的情况 | 前端怎么做 |
+|---|---|---|
+| `how_to_use` | 不会用这台家电 | 播放**完整讲解**（`play_from = 1`，`play_to = 最后一步`） |
+| `label` | 看不懂面板上的字 / 图标 | **放大**照片上的那个按钮（`zoom = true`），显示"原文 ＝ 母语名称"，答完继续播放 |
+| `function` | 不懂某一个功能 | **只播讲这个功能的那几步**（剪已有的章节，`clip` 给出时间范围），**不生成新视频**；没有哪一步讲过它就退回 `label` |
+| `other` / `unsure` | 一句话能答 / 说明里没有 | 简短回答（或说"我不确定"），继续播放 |
+| `danger` | 越过红线 | 显示安全提醒，停在原地 |
+
+**照片也先过红线**：`/api/analyze` 的第 0 步先判断设备本身（燃气设备、配电箱、被拆开的机器等），越线就不检索、不生成步骤，完整说明里 `safety = "blocked"`，只有 `safety_message_*`、`contact` 和 `warnings`。红线清单在 `safety.js` 的 `TRIAGE_SYSTEM`。
+
+**步骤时间标记**：`GET /api/render/:tutorial_id` 现在就能用。C 的真实清单（`output/media/<tutorial_id>.json`）出来前，时间按讲解词长度估算；播放器用它画步骤标记、跳转、重播，都不重新渲染。
+
 ---
 
 ## 7. 数据格式
@@ -311,6 +328,15 @@ sequenceDiagram
 | `play_from` / `play_to` | `type = play` 时要播的范围：从第几段播到第几段，播完就停。只需要一段时两个数字相同。某一段还没做好时，A 等 C 按顺序做到再播（见第 5 节"提问时 A 怎么处理"） |
 | `resume` | `true`：回答完从暂停处继续播放（`answer_only` 时用） |
 
+`details_instruction` 分支在上面的基础上**只加字段，不改已有字段**：
+
+| 新字段 | 说明 |
+|---|---|
+| `intent` | `how_to_use` / `label` / `function` / `other` / `unsure` / `danger`（见 6.3） |
+| `zoom` | `true`：放大 `highlight_button` 指的按钮 |
+| `clip` | `type = play` 时，要播的范围在整段视频里的 `{ start, end }`（秒） |
+| `type = "danger"` | 新增的取值：红线拒答，`answer_*` 是固定的安全话术 |
+
 **改格式之前必须先在群里说**，因为 A、B、C 都依赖它。
 
 ---
@@ -357,7 +383,9 @@ sequenceDiagram
 ├── server.js           # /api/analyze、/api/ask、/api/render、/api/session-token、/api/translate
 ├── persona.js          # Ava 的形象 / 声音 / 模型 ID、提示词、客户端工具
 ├── languages.js        # 10 种母语，每种配一个 Anam 母语声音 + 界面文案
-├── demo.js             # 演示模式数据（也是样例步骤 JSON）
+├── demo.js             # 演示模式数据（也是样例步骤 JSON）；含燃气锅炉示例（红线演示）
+├── safety.js           # 安全红线：照片关 + 提问关 + 固定的多语言拒答话术
+├── brain.js            # 问答大脑：精简目录、步骤时间标记、问题分类、结果校验
 ├── public/             # 前端（无构建步骤），含 demo-panel.svg
 ├── output/guides/      # 完整说明，文件名是 tutorial_id
 ├── output/media/       # 每一步的视频片段和拼好的整段视频
