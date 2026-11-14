@@ -31,6 +31,20 @@ const player = {
   chapters: [],        // 步骤时间标记 [{ step, start, end, ready }]
   timer: 0,
 };
+// 数字人会话管理：Anam 每个会话有时长上限，所以
+//   · 讲解按“段”（每一步一段）播放，开始一段之前如果剩余时间不够，就先开一个新会话；
+//   · Ava 说完、没人接话时主动断开会话待机；用户一有输入（说话 / 点按钮 / 打字）再开新会话接着讲。
+const session = {
+  limitMs: 180000,     // 单个会话的时长上限（/api/config 下发）；0 = 不主动续会话
+  marginMs: 15000,     // 离上限多远就不再用这个会话开新的一段
+  idleMs: 4000,        // 说完后多久没人接话就断开
+  pauseEach: false,    // 每讲完一段就停下等用户
+  timer: 0,
+  busy: null,          // 正在连接中的 Promise，避免重复连接
+  rec: null,           // 待机时的浏览器语音识别
+};
+const SR_LANG = { zh: "zh-CN", en: "en-US", es: "es-ES", vi: "vi-VN", ja: "ja-JP", ko: "ko-KR", fr: "fr-FR", ar: "ar-SA", hi: "hi-IN", pt: "pt-BR" };
+const speakMs = (text) => 2500 + text.length * (/[぀-鿿가-힯]/.test(text) ? 260 : 75); // 念完一段话大约要多久
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const lessonActive = () => $("#screen-lesson").classList.contains("active");
 const blocked = () => state.guide?.safety === "blocked"; // 越过安全红线：没有步骤，只有安全提醒
@@ -39,6 +53,10 @@ const blocked = () => state.guide?.safety === "blocked"; // 越过安全红线�
 init();
 async function init() {
   state.cfg = await fetch("/api/config").then((r) => r.json());
+  const sc = state.cfg.session || {};
+  if (Number.isFinite(sc.limitSeconds)) session.limitMs = sc.limitSeconds * 1000;
+  if (Number.isFinite(sc.idleSeconds)) session.idleMs = sc.idleSeconds * 1000;
+  session.pauseEach = !!sc.pauseEachSection;
   const sel = $("#lang");
   for (const l of state.cfg.languages) sel.add(new Option(`${l.name} · ${l.english}`, l.code));
   const pref = (navigator.languages || [navigator.language]).map((x) => x.slice(0, 2).toLowerCase());
@@ -72,7 +90,15 @@ async function init() {
   $("#btn-play").onclick = togglePlay;
   // 开始打字提问就自动暂停；什么都没问就接着播
   $("#ask").oninput = () => { if ($("#ask").value.trim() && lessonActive()) pauseForQuestion(); };
-  $("#ask").onblur = () => { if (!$("#ask").value.trim() && player.asking && state.mode !== "thinking" && state.mode !== "speaking") runAfter(); };
+  $("#ask").onblur = () => {
+    if ($("#ask").value.trim()) return;
+    if (player.asking && state.mode !== "thinking" && state.mode !== "speaking") runAfter();
+    else armIdleCut();
+  };
+  // 准备打字时先把 Ava 叫回来，回答就不用再等连接
+  $("#ask").onfocus = () => { if (lessonActive()) ensureSession(); };
+  // 待机时点一下 Ava 也能把她叫回来
+  $("#avatar").onclick = () => ensureSession().then(() => armIdleCut(20000));
   $("#btn-back").onclick = backToCapture;
   $("#btn-rec").onclick = toggleRecording;
   document.querySelectorAll(".chip").forEach((b) => (b.onclick = () => command(b.dataset.cmd, { fromTap: true })));
@@ -122,6 +148,76 @@ async function start() {
   $("#greet-bubble").textContent = state.lang.greeting;
   // 真实数字人的问候由 persona 的 initialMessage 说出；演示数字人用朗读
   if (!state.avatar.speaksGreetingItself) say(state.lang.greeting);
+  armIdleCut(30000); // 问候语说完会更早断开（见 onFreeSpeech）；这里兜底
+}
+
+// ---------- 会话续期 / 待机 ----------
+// Ava 要说话之前调用：会话已经断开，或者剩下的时间不够说完 needMs，就先开一个新会话。
+async function ensureSession(needMs = 20000) {
+  clearTimeout(session.timer);
+  const a = state.avatar;
+  if (!(a instanceof AnamAvatar)) return;
+  const stale = session.limitMs > 0 && a.ageMs + needMs + session.marginMs > session.limitMs;
+  if (a.connected && !stale) return;
+  session.busy ||= (async () => {
+    stopIdleListener();
+    setBadge("…");
+    try {
+      const lesson = lessonActive() && state.guide;
+      state.avatar = await connectAvatar(lesson ? { phase: "lesson", guideId: state.guide.id } : { phase: "greet", quiet: true });
+    } finally {
+      session.busy = null;
+      setBadge("");
+      renderListen(state.avatar.listening ? "on" : "off");
+    }
+  })();
+  return session.busy;
+}
+
+// Ava 说完了：过一会儿没人接话就断开会话（不占时长），等用户输入
+function armIdleCut(ms = session.idleMs) {
+  clearTimeout(session.timer);
+  if (!(state.avatar instanceof AnamAvatar) || !state.avatar.connected) return;
+  session.timer = setTimeout(cutSession, ms);
+}
+
+async function cutSession() {
+  const a = state.avatar;
+  if (!(a instanceof AnamAvatar) || !a.connected || session.busy) return;
+  // 还在播、还在想、Ava 还在出声：不断开
+  if (player.playing || state.mode === "thinking" || free.text || a.speaking) return;
+  await a.disconnect();
+  standby();
+}
+
+// 会话断开后的待机状态（主动断开，或者 Anam 那边到了时长上限）
+function standby() {
+  setBadge("💤");
+  renderListen("standby");
+  if (lessonActive()) startIdleListener();
+}
+
+// 待机时没有 Anam 的麦克风，用浏览器自带的语音识别听用户说话；听到就交给 userSays（会自动开新会话）
+function startIdleListener() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR || session.rec) return;
+  const rec = new SR();
+  rec.lang = SR_LANG[state.lang.code] || state.lang.code;
+  rec.onresult = (e) => {
+    const text = e.results[e.results.length - 1][0].transcript;
+    stopIdleListener();
+    userSays(text);
+  };
+  rec.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") stopIdleListener(); };
+  rec.onend = () => setTimeout(() => { if (session.rec === rec) try { rec.start(); } catch {} }, 300); // 一直听到有输入为止
+  session.rec = rec;
+  try { rec.start(); } catch { session.rec = null; }
+}
+
+function stopIdleListener() {
+  const rec = session.rec;
+  session.rec = null;
+  try { rec?.abort(); } catch {}
 }
 
 async function connectAvatar(opts) {
@@ -132,6 +228,7 @@ async function connectAvatar(opts) {
     a.onListenChange = renderListen;
     a.onTool = onTool;
     a.onFreeSpeech = onFreeSpeech;
+    a.onClosed = () => { if (state.avatar === a) standby(); };
     return a;
   };
   if (!state.cfg.demo.avatar) {
@@ -193,7 +290,8 @@ async function analyze({ sample = false } = {}) {
   $("#research-text").textContent = ui.researching;
   $("#research-log").innerHTML = "";
   state.avatar.interrupt();
-  say(ui.lookingAt);
+  $("#greet-bubble").textContent = ui.lookingAt;
+  say(ui.lookingAt); // 会话待机时不出声，只显示在气泡里
 
   try {
     // 只把照片和语言发给识别接口
@@ -303,7 +401,7 @@ async function enterLesson(imgSrc) {
     $("#action").innerHTML = "";
     showDanger(g.safety_message_native, g.safety_message_en);
     await speakLine(g.safety_message_native, g.safety_message_en);
-    if (gen === state.gen) state.mode = "waiting";
+    if (gen === state.gen) { state.mode = "waiting"; armIdleCut(); }
     return;
   }
   goto(-1);
@@ -326,7 +424,10 @@ async function backToCapture() {
   clearZoom();
   show("screen-capture");
   placeAvatar($("#hero-slot-2"));
-  if (state.avatar instanceof AnamAvatar) state.avatar = await connectAvatar({ phase: "greet", quiet: true });
+  stopIdleListener();
+  clearTimeout(session.timer);
+  // 回到拍照页不马上连数字人：用户点一下 Ava 或开始下一次讲解时再连，不占会话时长
+  if (state.avatar instanceof AnamAvatar) { await state.avatar.disconnect(); setBadge("💤"); }
 }
 
 const steps = () => state.guide.steps;
@@ -361,6 +462,13 @@ async function goto(i, { keepRange = false } = {}) {
   else if (s) result = await speakLine(s.narration_native, s.narration_en, renderChapters);
   else result = await speakLine(g.closing_native, g.closing_en);
   if (gen !== state.gen) return;
+  // 会话在这一段中途被断开（到了时长上限）→ 开新会话把这一段重讲一遍；同一段连续断两次就停下等用户
+  if (result === "closed") {
+    if (player.closedAt === state.step) { player.closedAt = null; player.playing = false; return waitForUser(); }
+    player.closedAt = state.step;
+    return resume();
+  }
+  player.closedAt = null;
   // 用户开口把讲解打断了 → 当作提问暂停，回答完从这一步重新播
   if (result === "interrupted") return pauseForQuestion();
   player.cursor = state.step + 1;
@@ -385,9 +493,11 @@ async function goto(i, { keepRange = false } = {}) {
     if (gen !== state.gen) return;
     return waitForUser();
   }
+  // 分段模式：每讲完一段就停下，用户说“下一步 / 继续”再开始下一段
+  if (session.pauseEach) { player.playing = false; return waitForUser(); }
   await sleep(500);
   if (gen !== state.gen) return;
-  goto(state.step + 1, { keepRange: true });
+  goto(state.step + 1, { keepRange: true }); // 下一段开始前 speakLine 会检查会话，必要时换新会话
 }
 
 // ---------- 播放器：步骤标记 / 暂停 / 继续 / 只播一段 ----------
@@ -463,7 +573,7 @@ function runAfter() {
   player.asking = false;
   clearZoom();
   if (!state.guide || !lessonActive()) return;
-  if (blocked()) { state.mode = "waiting"; return; }
+  if (blocked()) { state.mode = "waiting"; armIdleCut(); return; }
   if (a?.kind === "play") return playRange(a.from, a.to);
   if (a?.kind === "resume") return resume();
   drawOverlay({ target: steps()[state.step]?.button_id });
@@ -472,6 +582,8 @@ function runAfter() {
 
 // 真实数字人：用户一开口就暂停；说完后如果 Ava 一直没反应（比如只是环境噪音），过一会儿自己继续
 function onUserSpeech(kind) {
+  clearTimeout(session.timer);        // 用户在说话：先别断开
+  if (kind === "end") armIdleCut(12000); // Ava 一直没接话的话，照样待机
   if (!state.guide || !lessonActive()) return;
   clearTimeout(player.timer);
   if (kind === "start") return pauseForQuestion();
@@ -509,6 +621,7 @@ function hideDanger() { $("#danger").hidden = true; }
 
 function waitForUser() {
   state.mode = "waiting";
+  armIdleCut(); // Ava 说完了：没人接话就断开会话待机，用户一有输入再开新会话
   renderChapters();
   const ui = state.lang.ui;
   $("#hint").textContent = `${ui.hint} “${ui.next}” · “${ui.repeat}” · “${ui.what}”`;
@@ -606,10 +719,14 @@ function placePip(cx, cy) {
 
 // ---------- 说话 + 字幕 ----------
 async function speakLine(native, en, onFrac) {
+  const gen = state.gen;
   state.mode = "speaking";
   $(".chips").classList.remove("waiting");
   $("#hint").textContent = "";
   setSubs(native, en, 0);
+  // 开口之前检查会话：断开了、或剩余时间不够说完这一段 → 先开一个新会话
+  await ensureSession(speakMs(native));
+  if (gen !== state.gen) return "interrupted"; // 连接期间用户已经做了别的操作
   state.history.push({ role: "assistant", content: native });
   const result = await say(native, (spoken) => {
     setSubs(native, en, spoken);
@@ -633,7 +750,10 @@ function setSubs(native, en, spoken) {
 // Ava 自己组织语言的回答（问按钮、问问题）：字幕跟着说，说完补英文翻译
 let free = { text: "", gen: -1 };
 function onFreeSpeech(chunk, end) {
-  if (!lessonActive()) return;
+  clearTimeout(session.timer);
+  if (!lessonActive()) { if (end) armIdleCut(); return; } // 拍照页：问候语 / 闲聊说完后也待机
+  // 讲解词被打断后 Anam 会补发一个空的“说完了”事件：不是 Ava 的回答，别动字幕，也别取消待机
+  if (!chunk && !free.text) { if (end && !player.playing) armIdleCut(); return; }
   clearTimeout(player.timer);
   if (free.gen !== state.gen) { free = { text: "", gen: state.gen }; state.mode = "speaking"; $(".chips").classList.remove("waiting"); }
   free.text += chunk;
@@ -822,7 +942,7 @@ function renderListen(kind) {
   const ui = state.lang.ui;
   el.className = "listen " + (kind === "on" ? "on" : kind === "hear" ? "hear" : "");
   $("#listen-text").textContent =
-    kind === "on" ? ui.listening : kind === "hear" ? "🎙️ …" : kind === "thinking" ? ui.thinking : ui.micOff;
+    kind === "on" ? ui.listening : kind === "hear" ? "🎙️ …" : kind === "thinking" ? ui.thinking : kind === "standby" ? `💤 ${ui.standby}` : ui.micOff;
 }
 
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -836,20 +956,28 @@ const stripCues = (s) => s.replace(/\[(happy|warm|playful|curious|supportive|con
 class AnamAvatar {
   listening = false;
   speaksGreetingItself = true;
-  #client = null; #pending = null; #seq = 0; #freeWaiters = [];
+  connected = false;   // 当前有没有活着的会话
+  speaking = false;    // Ava 正在出声（固定讲解词或她自己的回答）
+  #client = null; #pending = null; #seq = 0; #freeWaiters = []; #connectedAt = 0;
+  #tail = false;       // 讲解词刚被我们打断：它剩下的片段还会陆续到，不能当成 Ava 的回答
 
+  // 这个会话已经用了多久（毫秒）
+  get ageMs() { return this.connected ? Date.now() - this.#connectedAt : 0; }
+
+  // 开一个新会话（已有会话会先关掉）。每个会话单独计时，所以这也是“续期”的办法。
   async connect({ lang, phase, guideId, quiet = false }) {
     const r = await fetch("/api/session-token", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lang: lang.code, phase, guideId }),
+      body: JSON.stringify({ lang: lang.code, phase, guideId, quiet }),
     });
     const { sessionToken, error } = await r.json();
     if (!sessionToken) throw new Error(error || "no token");
-    if (this.#client) { this.#finish("replaced"); try { await this.#client.stopStreaming(); } catch {} }
+    await this.disconnect();
     this.speaksGreetingItself = phase === "greet" && !quiet;
 
     const { createClient, AnamEvent } = window.anam;
     const c = (this.#client = createClient(sessionToken));
+    const live = () => this.#client === c; // 旧会话迟到的事件一律忽略
     // 客户端工具必须在开始推流前注册
     if (phase === "lesson") {
       for (const name of ["next_step", "previous_step", "repeat_step", "go_to_step", "highlight_button", "pause_video", "resume_video", "ask_tutor"]) {
@@ -858,19 +986,27 @@ class AnamAvatar {
     }
     const ready = new Promise((res, rej) => {
       c.addListener(AnamEvent.SESSION_READY, res);
-      c.addListener(AnamEvent.CONNECTION_CLOSED, (reason) => rej(new Error(reason)));
+      c.addListener(AnamEvent.CONNECTION_CLOSED, (reason) => {
+        rej(new Error(reason));
+        if (!live()) return;
+        // 不是我们主动断的（比如到了时长上限）：收尾，并告诉页面进入待机
+        this.#closed();
+        this.onClosed?.(reason);
+      });
       setTimeout(() => rej(new Error("timeout")), 25000);
     });
-    c.addListener(AnamEvent.VIDEO_PLAY_STARTED, () => $("#avatar").classList.add("has-video"));
-    c.addListener(AnamEvent.AUDIO_STREAM_STARTED, (stream) => (recorder.audioStream = stream));
-    c.addListener(AnamEvent.MIC_PERMISSION_GRANTED, () => { this.listening = true; this.onListenChange?.("on"); });
-    c.addListener(AnamEvent.MIC_PERMISSION_DENIED, () => { this.listening = false; this.onListenChange?.("off"); });
-    c.addListener(AnamEvent.USER_SPEECH_STARTED, () => { this.onListenChange?.("hear"); this.onUserSpeech?.("start"); });
-    c.addListener(AnamEvent.USER_SPEECH_ENDED, () => { this.onListenChange?.(this.listening ? "on" : "off"); this.onUserSpeech?.("end"); });
+    c.addListener(AnamEvent.VIDEO_PLAY_STARTED, () => live() && $("#avatar").classList.add("has-video"));
+    c.addListener(AnamEvent.AUDIO_STREAM_STARTED, (stream) => live() && (recorder.audioStream = stream));
+    c.addListener(AnamEvent.MIC_PERMISSION_GRANTED, () => { if (!live()) return; this.listening = true; this.onListenChange?.("on"); });
+    c.addListener(AnamEvent.MIC_PERMISSION_DENIED, () => { if (!live()) return; this.listening = false; this.onListenChange?.("off"); });
+    c.addListener(AnamEvent.USER_SPEECH_STARTED, () => { if (!live()) return; this.onListenChange?.("hear"); this.onUserSpeech?.("start"); });
+    c.addListener(AnamEvent.USER_SPEECH_ENDED, () => { if (!live()) return; this.#tail = false; this.onListenChange?.(this.listening ? "on" : "off"); this.onUserSpeech?.("end"); });
     c.addListener(AnamEvent.MESSAGE_STREAM_EVENT_RECEIVED, (ev) => {
-      if (ev.role !== "persona") return;
+      if (!live() || ev.role !== "persona") return;
       const text = stripCues(ev.content || "");
       const end = ev.endOfSpeech || ev.interrupted;
+      this.speaking = !end;
+      if (!this.#pending && this.#tail) { if (end) this.#tail = false; return; }
       if (this.#pending) {
         // 正在念固定讲解词 → 字幕逐字点亮
         this.#pending.spoken += text.length;
@@ -884,15 +1020,42 @@ class AnamAvatar {
         if (end) this.#freeWaiters.splice(0).forEach((f) => f());
       }
     });
-    c.addListener(AnamEvent.TALK_STREAM_INTERRUPTED, () => this.#finish("interrupted"));
-    await c.streamToVideoElement("avatar-video");
-    await ready;
+    c.addListener(AnamEvent.TALK_STREAM_INTERRUPTED, () => live() && this.#finish("interrupted"));
+    try {
+      await c.streamToVideoElement("avatar-video");
+      await ready;
+    } catch (e) {
+      if (live()) this.#closed();
+      try { await c.stopStreaming(); } catch {}
+      throw e;
+    }
+    this.connected = true;
+    this.#connectedAt = Date.now();
     if (this.listening) this.onListenChange?.("on");
+  }
+
+  // 主动断开会话（Ava 说完了、没人接话）。之后 connect() 会开一个全新的会话。
+  async disconnect() {
+    const c = this.#client;
+    if (!c) return;
+    this.#closed(); // 先清掉引用，这样它的 CONNECTION_CLOSED 事件不会被当成意外断开
+    try { await c.stopStreaming(); } catch {}
+  }
+
+  #closed() {
+    this.#client = null;
+    this.connected = false;
+    this.listening = false;
+    this.speaking = false;
+    $("#avatar").classList.remove("has-video"); // 换回形象照
+    this.#finish("closed");
   }
 
   // 让 Ava 照念一段话，说完（或被打断）时返回
   say(text, onProgress) {
     this.#finish("replaced");
+    if (!this.#client) return Promise.resolve("closed"); // 会话已断开：调用方（speakLine）会先 ensureSession
+    this.#tail = false;
     const id = ++this.#seq;
     return new Promise((resolve) => {
       const est = 2500 + text.length * (/[぀-鿿가-힯]/.test(text) ? 260 : 75);
@@ -911,6 +1074,8 @@ class AnamAvatar {
 
   interrupt() {
     try { this.#client?.interruptPersona(); } catch {}
+    this.speaking = false;
+    if (this.#pending) this.#tail = true;
     this.#finish("interrupted");
   }
 
@@ -936,7 +1101,7 @@ class FallbackAvatar {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR || this.#rec) return this.onListenChange?.(this.listening ? "on" : "off");
     const rec = (this.#rec = new SR());
-    rec.lang = { zh: "zh-CN", en: "en-US", es: "es-ES", vi: "vi-VN", ja: "ja-JP", ko: "ko-KR", fr: "fr-FR", ar: "ar-SA", hi: "hi-IN", pt: "pt-BR" }[lang.code] || lang.code;
+    rec.lang = SR_LANG[lang.code] || lang.code;
     rec.continuous = true;
     rec.onresult = (e) => {
       const t = e.results[e.results.length - 1][0].transcript;
