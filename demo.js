@@ -1,4 +1,5 @@
 // 演示模式：没有 ANTHROPIC_API_KEY 时使用的示例数据（日文洗衣机面板，public/demo-panel.svg）
+import { blockedGuide } from "./safety.js";
 const T = {
   zh: {
     appliance: "全自动洗衣机", goal: "快速洗一次衣服（お急ぎ 快洗模式）",
@@ -60,6 +61,23 @@ const BOX = {
 
 const pick = (lang) => (lang === "zh" ? T.zh : T.en);
 
+// 示例：燃气锅炉面板（public/demo-boiler.svg）—— 演示安全红线，不生成任何步骤
+export function DEMO_DANGER_GUIDE(lang) {
+  const zh = lang === "zh";
+  return {
+    demoImage: "/demo-boiler.svg",
+    ...blockedGuide({
+      langCode: lang,
+      appliance_native: zh ? "燃气锅炉" : "Gas boiler",
+      appliance_en: "Gas boiler",
+      brand: "Vexa (demo)",
+      kind: "gas",
+      reason_native: zh ? "这是一台燃气锅炉，操作不当可能引起漏气或一氧化碳中毒。" : "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning.",
+      reason_en: "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning.",
+    }),
+  };
+}
+
 export function DEMO_GUIDE(lang) {
   const n = pick(lang), e = T.en;
   return {
@@ -87,21 +105,4 @@ export function DEMO_GUIDE(lang) {
     sources: [], // 演示数据没有联网检索
     closing_native: n.closing, closing_en: e.closing,
   };
-}
-
-export function demoAnswer(q, guide, stepIndex, focusId, lang) {
-  const n = pick(lang), e = T.en;
-  const s = q.toLowerCase();
-  if (/下一|继续|好了|next|continue|done/.test(s)) return { intent: "next", button_id: null, reply_native: "", reply_en: "" };
-  if (/再说|重复|没听|again|repeat/.test(s)) return { intent: "repeat", button_id: null, reply_native: "", reply_en: "" };
-  if (/上一|back|previous/.test(s)) return { intent: "previous", button_id: null, reply_native: "", reply_en: "" };
-  const id = focusId || guide?.steps?.[stepIndex]?.button_id;
-  if (id && n.buttons[id] && /按钮|键|干什么|做什么|button|what|旋钮/.test(s)) {
-    return {
-      intent: "button_info", button_id: id,
-      reply_native: `${n.ui.which}「${n.buttons[id][0]}」。${n.buttons[id][1]}`,
-      reply_en: `${e.ui.which} ${e.buttons[id][0]}. ${e.buttons[id][1]}`,
-    };
-  }
-  return { intent: "question", button_id: null, reply_native: n.ui.unknown, reply_en: e.ui.unknown };
 }

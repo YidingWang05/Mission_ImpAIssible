@@ -169,3 +169,31 @@ textarea.text { resize: vertical; min-height: 60px; font-family: inherit; }
 .tag { font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 6px; margin-inline-start: 4px; color: var(--muted); }
 .json-link { text-align: center; text-decoration: none; display: block; }
 .json-link:not([href]) { display: none; }
+
+/* ---------- 放大按钮（看不懂标签时） ---------- */
+.photo-wrap { overflow: hidden; }
+.zoomer { position: relative; transform-origin: 0 0; transition: transform .6s ease; }
+.photo-wrap.zoomed .step-chip { display: none; }
+.label-card { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 3; background: #000d; color: #fff; border: 2px solid var(--answer); border-radius: 14px; padding: 8px 14px; font: 600 18px/1.3 system-ui; text-align: center; max-width: calc(100% - 20px); }
+.label-card b { font-size: 24px; color: #ffd27a; }
+.label-card span { margin: 0 8px; opacity: .7; }
+.label-card small { display: block; font-weight: 400; font-size: 13px; opacity: .8; }
+
+/* ---------- 步骤时间标记 ---------- */
+.chapters { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #0b0b0b; border-bottom: 1px solid #222; }
+.chapters .play { width: 36px; height: 36px; flex: none; border-radius: 50%; border: 0; background: #fff; color: #111; font-size: 15px; display: grid; place-items: center; }
+.chapter-track { flex: 1; display: flex; gap: 4px; min-width: 0; }
+.seg { position: relative; flex: 1 1 0; min-width: 28px; height: 28px; border: 0; border-radius: 8px; background: #ffffff26; color: #fff; font: 700 13px/1 system-ui; overflow: hidden; padding: 0; }
+.seg i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--target); opacity: .85; transition: width .25s linear; }
+.seg span { position: relative; }
+.seg.done i { width: 100%; opacity: .45; }
+.seg.cur { outline: 2px solid var(--target); outline-offset: 1px; }
+.seg.in-range { box-shadow: inset 0 -4px 0 var(--answer); }
+.seg:not(.ready) { opacity: .4; }
+
+/* ---------- 安全红线 ---------- */
+.danger { background: #fdecea; color: #7a1c14; border: 1px solid #f1b0a8; border-left: 6px solid #c0392b; border-radius: 12px; padding: 12px 14px; }
+.danger b { font-size: 17px; }
+.danger p { margin: 6px 0 0; font-size: 16px; line-height: 1.5; }
+.danger p.small { font-size: 13px; opacity: .85; }
+.lesson.blocked .chips, .lesson.blocked .hint, .lesson.blocked .tap-tip, .lesson.blocked .steps, .lesson.blocked .json-link, .lesson.blocked #btn-rec { display: none; }

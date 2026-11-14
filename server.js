@@ -9,7 +9,8 @@
 //   GET  /guides/:id.json    下载步骤 JSON
 //   POST /api/session-token  数字人会话令牌：phase=greet（打招呼）/ lesson（讲解，注入步骤 JSON + 客户端工具）
 //   POST /api/translate      数字人自由回答的英文字幕
-//   POST /api/ask            仅演示模式（无 Anam）时的问答
+//   POST /api/ask            问答：tutorial_id 取上下文 → 红线检查 → 判断问题类型 → 简短回答 + 要播的范围
+//   GET  /api/render/:id     步骤时间标记（C 的真实视频做好前，按讲解词长度估算）
 import "dotenv/config";
 import express from "express";
 import fs from "node:fs/promises";
@@ -21,11 +22,15 @@ import { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { LANGUAGES } from "./languages.js";
 import { PERSONA, greetPrompt, lessonPrompt, LESSON_TOOLS } from "./persona.js";
-import { DEMO_GUIDE, demoAnswer } from "./demo.js";
+import { DEMO_GUIDE, DEMO_DANGER_GUIDE } from "./demo.js";
+import { TriageSchema, TRIAGE_SYSTEM, blockedGuide, classifyDanger, dangerReply } from "./safety.js";
+import { AskSchema, ASK_SYSTEM, catalog, chapters, normalizeAsk, heuristicAsk } from "./brain.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const GUIDE_DIR = path.join(here, "output", "guides");
+const MEDIA_DIR = path.join(here, "output", "media");
 await fs.mkdir(GUIDE_DIR, { recursive: true });
+await fs.mkdir(MEDIA_DIR, { recursive: true });
 
 const app = express();
 app.use(express.json({ limit: "15mb" }));
@@ -35,6 +40,7 @@ app.get("/vendor/anam.js", (_req, res) =>
 );
 
 const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
+const ASK_MODEL = process.env.CLAUDE_ASK_MODEL || MODEL; // 问答用的模型，默认和识别相同
 const HAS_CLAUDE = Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 const HAS_ANAM = Boolean(process.env.ANAM_API_KEY);
 const claude = HAS_CLAUDE ? new Anthropic() : null;
@@ -119,11 +125,12 @@ Rules:
 - One action per step, in real operating order; teach the most common task.
 - Narration is spoken by a friendly teacher: plain words, short sentences, no jargon.
 - *_native / .native fields are in the user's native language; *_en / .en fields in English.
+- Never write steps for repairs, opening the casing, gas supply, wiring, or bypassing safety locks. Put a warning instead that tells the user to contact the manufacturer's official support or their landlord.
 - If the photo is not a readable control panel, set recognized=false and use intro_* to politely ask for a closer, straight-on, well-lit photo.`;
 
 // NDJSON 流：前端可以实时显示“正在搜索 …”
 app.post("/api/analyze", async (req, res) => {
-  const { image, mediaType = "image/jpeg", lang: code } = req.body || {}; // 注意：不接收用户疑问
+  const { image, mediaType = "image/jpeg", lang: code, sample } = req.body || {}; // 注意：不接收用户疑问
   const lang = langOf(code);
   res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");
@@ -131,12 +138,19 @@ app.post("/api/analyze", async (req, res) => {
 
   try {
     if (!HAS_CLAUDE) {
+      send({ type: "status", stage: "safety" });
+      if (sample === "boiler") return await finish(send, res, { ...DEMO_DANGER_GUIDE(lang.code), demo: true }, lang);
       send({ type: "status", stage: "research" });
       send({ type: "search", query: "AQUA AW-7G 取扱説明書 (demo)" });
       return await finish(send, res, { ...DEMO_GUIDE(lang.code), demo: true }, lang);
     }
     if (!image) throw new Error("缺少照片");
     const imageBlock = { type: "image", source: { type: "base64", media_type: mediaType, data: image } };
+
+    // ---- 阶段 0：安全红线（最先做，越线就不再检索、不生成教程）----
+    send({ type: "status", stage: "safety" });
+    const danger = await triage(imageBlock, lang);
+    if (danger) return await finish(send, res, danger, lang);
 
     // ---- 阶段 1：识别 + 联网检索 ----
     send({ type: "status", stage: "research" });
@@ -174,6 +188,25 @@ app.post("/api/analyze", async (req, res) => {
     res.end();
   }
 });
+
+// 看照片判断设备本身是否越过红线。越线返回“被拦截的完整说明”，否则返回 null。
+// 判断不了（模型拒答 / 没有结构化结果）时不放行。
+async function triage(imageBlock, lang) {
+  const msg = await claude.beta.messages.parse({
+    model: MODEL,
+    max_tokens: 4000,
+    ...FALLBACK,
+    output_config: { effort: "low", format: betaZodOutputFormat(TriageSchema) },
+    system: TRIAGE_SYSTEM,
+    messages: [
+      { role: "user", content: [imageBlock, { type: "text", text: `User's native language: ${lang.english} (${lang.name}, ${lang.code}). Classify this photo.` }] },
+    ],
+  });
+  if (msg.stop_reason === "refusal" || !msg.parsed_output) throw new Error("这张照片无法分析，请换一张试试");
+  const t = msg.parsed_output;
+  if (t.hazard === "none") return null;
+  return blockedGuide({ langCode: lang.code, appliance_native: t.appliance_native, appliance_en: t.appliance_en, brand: t.brand, kind: t.hazard, reason_native: t.reason_native, reason_en: t.reason_en });
+}
 
 async function research(imageBlock, send) {
   const messages = [
@@ -258,8 +291,10 @@ async function finish(send, res, guide, lang) {
   const file = {
     schema: "appliance-tutor/guide@2",
     id,
+    tutorial_id: id, // README 里的名字；和 id 是同一个值
     generated_at: new Date().toISOString(),
     language: { code: lang.code, name: lang.english },
+    safety: "ok", // 越过红线时被 content 里的 "blocked" 覆盖
     ...content,
   };
   await fs.writeFile(path.join(GUIDE_DIR, `${id}.json`), JSON.stringify(file, null, 2));
@@ -307,7 +342,9 @@ app.post("/api/session-token", async (req, res) => {
   if (phase === "lesson") {
     const guide = await loadGuide(guideId);
     if (!guide) return res.status(404).json({ error: "找不到这份步骤" });
-    personaConfig = { ...base, systemPrompt: lessonPrompt(lang, guide), tools: LESSON_TOOLS, skipGreeting: true };
+    // 越过红线的设备：Ava 只会劝用户联系厂家，不给任何操作工具
+    const tools = guide.safety === "blocked" ? [] : LESSON_TOOLS;
+    personaConfig = { ...base, systemPrompt: lessonPrompt(lang, guide), tools, skipGreeting: true };
   } else {
     personaConfig = { ...base, systemPrompt: greetPrompt(lang), initialMessage: lang.greeting, uninterruptibleGreeting: true };
   }
@@ -347,10 +384,71 @@ app.post("/api/translate", async (req, res) => {
   }
 });
 
-// 演示模式（无 Anam 数字人）的问答
-app.post("/api/ask", (req, res) => {
-  const { lang, question, guide, stepIndex = 0, focusButtonId } = req.body || {};
-  res.json(demoAnswer(String(question || ""), guide, stepIndex, focusButtonId, langOf(lang).code));
+// =====================================================================================
+// 3. 步骤时间标记 + 问答
+// =====================================================================================
+
+// 步骤时间标记。C 的视频工厂写出 output/media/<id>.json（README 7.2 的清单）后直接用真实时间；
+// 在那之前按讲解词长度估算，播放器照样能画步骤标记、跳转、重播，不需要重新渲染。
+async function manifestOf(guide) {
+  try {
+    return JSON.parse(await fs.readFile(path.join(MEDIA_DIR, `${guide.id}.json`), "utf8"));
+  } catch {
+    return { tutorial_id: guide.id, status: "done", video_url: null, estimated: true, chapters: chapters(guide), clips: [] };
+  }
+}
+
+app.get("/api/render/:id", async (req, res) => {
+  const guide = await loadGuide(req.params.id);
+  if (!guide) return res.status(404).json({ error: "找不到这份步骤" });
+  res.json(await manifestOf(guide));
+});
+
+// 问答：只收 tutorial_id，不收照片、不收完整说明
+app.post("/api/ask", async (req, res) => {
+  const b = req.body || {};
+  const guide = await loadGuide(b.tutorial_id || b.guideId);
+  if (!guide) return res.status(404).json({ error: "找不到这份步骤" });
+  const lang = langOf(b.language || b.lang || guide.language?.code);
+  const question = String(b.question || "").trim().slice(0, 500);
+  const current = Math.max(1, Math.min(Number(b.current_step) || 1, Math.max(guide.steps.length, 1)));
+  const marks = (await manifestOf(guide)).chapters;
+  const done = (raw) => res.json(normalizeAsk(raw, guide, current, lang.code, marks));
+  const blank = { answer_native: "", answer_en: "", button_id: null, play_from: null, play_to: null };
+
+  // ① 红线：设备本身被拦截，或者问题本身危险 → 不交给模型，直接给固定的安全话术
+  if (guide.safety === "blocked") return done({ ...blank, intent: "danger", danger_kind: guide.safety_kind });
+  const kind = classifyDanger(question);
+  if (kind) return done({ ...blank, intent: "danger", danger_kind: kind });
+
+  // ② 没有 Claude（演示模式）：本地规则
+  if (!HAS_CLAUDE) return done(heuristicAsk(question, guide, current, lang.code));
+
+  // ③ Claude 判断问题类型。只发精简目录 + 当前步骤 + 问题
+  try {
+    const msg = await claude.beta.messages.parse({
+      model: ASK_MODEL,
+      max_tokens: 4000,
+      ...FALLBACK,
+      output_config: { effort: "low", format: betaZodOutputFormat(AskSchema) },
+      system: ASK_SYSTEM,
+      messages: [
+        {
+          role: "user",
+          content:
+            `User's native language: ${lang.english} (${lang.name}, ${lang.code}).\n` +
+            `CATALOG:\n${JSON.stringify(catalog(guide))}\n` +
+            `Current step: ${current}\n` +
+            `QUESTION: ${question}`,
+        },
+      ],
+    });
+    if (msg.stop_reason === "refusal" || !msg.parsed_output) return done({ ...blank, intent: "danger" });
+    done(msg.parsed_output);
+  } catch (e) {
+    console.error("ask", e);
+    done(heuristicAsk(question, guide, current, lang.code));
+  }
 });
 
 const port = Number(process.env.PORT) || 8000;

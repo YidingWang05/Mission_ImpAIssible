@@ -52,6 +52,7 @@
       <textarea id="question" class="text" rows="2" data-ph="questionPh"></textarea>
       <button id="btn-analyze" class="primary big" data-t="analyze" disabled>开始讲解</button>
       <button id="btn-sample" class="ghost" hidden>🧺 示例面板 / Sample panel</button>
+      <button id="btn-sample-danger" class="ghost" hidden>🔥 示例：燃气锅炉（安全红线） / Sample gas boiler</button>
       <div class="research" id="research" hidden>
         <p class="research-title"><span class="spinner"></span><span id="research-text"></span></p>
         <ul id="research-log"></ul>
@@ -73,10 +74,19 @@
       <!-- “视频画面”：真实照片 + 按钮标注 + 数字人画中画 + 双语字幕 -->
       <div class="stage" id="stage">
         <div class="photo-wrap" id="photo-wrap">
-          <img id="stage-img" alt="" />
-          <svg id="overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
+          <!-- 放大某个按钮时，只缩放这一层（照片 + 标注） -->
+          <div class="zoomer" id="zoomer">
+            <img id="stage-img" alt="" />
+            <svg id="overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
+          </div>
           <div class="pip" id="pip-slot"></div>
           <div class="step-chip" id="step-chip"></div>
+          <div class="label-card" id="label-card" hidden></div>
+        </div>
+        <!-- 步骤时间标记：每一步一段，点一下跳过去 / 重播 -->
+        <div class="chapters" id="chapters" hidden>
+          <button class="play" id="btn-play" type="button">▶</button>
+          <div class="chapter-track" id="chapter-track"></div>
         </div>
         <div class="subs" id="subs">
           <p class="sub-native" id="sub-native"></p>
@@ -85,6 +95,11 @@
       </div>
 
       <div class="controls">
+        <div class="danger" id="danger" role="alert" hidden>
+          <b>⚠️ <span id="danger-title"></span></b>
+          <p id="danger-native"></p>
+          <p id="danger-en" class="small"></p>
+        </div>
         <div class="action" id="action"></div>
         <div class="listen" id="listen"><span class="dot"></span><span id="listen-text"></span></div>
         <div class="hint muted small" id="hint"></div>
