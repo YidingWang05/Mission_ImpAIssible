@@ -1,0 +1,41 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-14T20-48-07-589Z-5e73e3",
+  "tutorial_id": "2026-11-14T20-48-07-589Z-5e73e3",
+  "generated_at": "2026-11-14T20:48:07.589Z",
+  "language": {
+    "code": "en",
+    "name": "English"
+  },
+  "safety": "blocked",
+  "recognized": true,
+  "safety_kind": "other",
+  "safety_message_native": "These are guns, not home appliances, and handling them wrongly could cause serious injury, so I can't teach this. For your safety, I can't walk you through this. Please don't try it yourself — contact the manufacturer's official support or your landlord.",
+  "safety_message_en": "These are guns, not home appliances, and handling them wrongly could cause serious injury, so I can't teach this. For your safety, I can't walk you through this. Please don't try it yourself — contact the manufacturer's official support or your landlord.",
+  "contact": {
+    "brand": null,
+    "advice_native": "For your safety, I can't walk you through this. Please don't try it yourself — contact the manufacturer's official support or your landlord.",
+    "advice_en": "For your safety, I can't walk you through this. Please don't try it yourself — contact the manufacturer's official support or your landlord."
+  },
+  "appliance_native": "A collection of firearms or replica guns (two rifles/submachine guns and five pistols) laid out on a carpet",
+  "appliance_en": "A collection of firearms or replica guns (two rifles/submachine guns and five pistols) laid out on a carpet",
+  "brand": "unknown",
+  "model": "unknown",
+  "model_confidence": "low",
+  "goal_native": "",
+  "goal_en": "",
+  "intro_native": "These are guns, not home appliances, and handling them wrongly could cause serious injury, so I can't teach this. For your safety, I can't walk you through this. Please don't try it yourself — contact the manufacturer's official support or your landlord.",
+  "intro_en": "These are guns, not home appliances, and handling them wrongly could cause serious injury, so I can't teach this. For your safety, I can't walk you through this. Please don't try it yourself — contact the manufacturer's official support or your landlord.",
+  "buttons": [],
+  "steps": [],
+  "tips": [],
+  "warnings": [
+    {
+      "native": "These are guns, not home appliances, and handling them wrongly could cause serious injury, so I can't teach this. For your safety, I can't walk you through this. Please don't try it yourself — contact the manufacturer's official support or your landlord.",
+      "en": "These are guns, not home appliances, and handling them wrongly could cause serious injury, so I can't teach this. For your safety, I can't walk you through this. Please don't try it yourself — contact the manufacturer's official support or your landlord."
+    }
+  ],
+  "sources": [],
+  "closing_native": "",
+  "closing_en": ""
+}

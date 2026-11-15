@@ -10,21 +10,27 @@
 //      当前账户额度用完 / 密钥失效 / 被限流时，自动换下一个密钥，并从同一段对话接着做，不从头来；
 //   4. 进度存在 .agent/<branch>.json。中断后（Ctrl+C、断网、所有密钥都用完）重新运行同一条命令就会接着做。
 //
-// 安全措施：不会 push；不会改 .env；不会把密钥打印到日志；有总花费上限（--max-usd）。
+// 安全措施：不会 push；不会改 .env；不会把密钥打印到日志。
+// 花费：默认没有总上限 —— 一个账户用完就换下一个，直到任务完成或所有密钥都用完。想设上限用 --max-usd。
 //
 // 选项：
 //   --prompt <file>    任务文件（默认 AGENT_PROMPT.md）
 //   --branch <name>    要在哪个分支上工作（默认 agent-work；不存在就从 --base 新建）
 //   --base <ref>       新分支从哪里分出来（默认：你现在所在的提交）
 //   --model <id>       默认 claude-opus-5-5（也可以用环境变量 AGENT_MODEL）
-//   --max-usd <n>      所有密钥加起来最多花多少美元（估算值，默认 40）
+//   --max-usd <n>      所有密钥加起来最多花多少美元（估算值；默认不限）
 //   --max-turns <n>    每一轮最多多少步，到了会自动续下一轮（默认 400）
 //   --fresh            忘掉上次的进度，开一段新对话（分支上已有的提交会保留）
 //   --dry-run          只打印计划，不调用模型、不建工作区
+//   --no-supervise     程序自己意外退出时不自动重启（默认会自动重启并接着做）
+//
+// 任务文件可以在运行期间修改：下一轮开始时会把新版本发给智能体。
+// 任务文件里如果要求中途换到另一个分支（例如后备方案），智能体会在同一个工作区里换过去。
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import crypto from "node:crypto";
+import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import dotenv from "dotenv";
 import { keysFor } from "../keys.js";
@@ -34,7 +40,7 @@ export const REPO = path.resolve(HERE, "..");
 
 // ---------------------------------------------------------------- 参数
 export function parseArgs(argv) {
-  const a = { prompt: "AGENT_PROMPT.md", branch: "agent-work", base: "HEAD", model: process.env.AGENT_MODEL || "claude-opus-5-5", maxUsd: 40, maxTurns: 400, fresh: false, dryRun: false };
+  const a = { prompt: "AGENT_PROMPT.md", branch: "agent-work", base: "HEAD", model: process.env.AGENT_MODEL || "claude-opus-5-5", maxUsd: Infinity, maxTurns: 400, fresh: false, dryRun: false };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     const next = () => argv[++i];
@@ -46,6 +52,8 @@ export function parseArgs(argv) {
     else if (k === "--max-turns") a.maxTurns = Number(next());
     else if (k === "--fresh") a.fresh = true;
     else if (k === "--dry-run") a.dryRun = true;
+    else if (k === "--child") a.child = true;
+    else if (k === "--no-supervise") a.noSupervise = true;
     else if (k === "--help" || k === "-h") a.help = true;
     else throw new Error(`不认识的参数：${k}`);
   }
@@ -65,8 +73,9 @@ export function prepareWorktree({ branch, base }) {
     if (gitOk(REPO, "rev-parse", "--verify", "--quiet", `refs/heads/${branch}`)) git(REPO, "worktree", "add", dir, branch);
     else git(REPO, "worktree", "add", "-b", branch, dir, base);
   }
+  // 任务文件可能让智能体中途换分支（后备方案），所以工作区不在 <branch> 上不算错，提示一下接着做
   const on = git(dir, "rev-parse", "--abbrev-ref", "HEAD");
-  if (on !== branch) throw new Error(`工作区 ${dir} 现在在分支 ${on} 上，不是 ${branch}。请手动处理后再运行。`);
+  if (on !== branch) console.log(`注意：工作区现在在分支 ${on} 上（不是 ${branch}），按上次停下的地方继续。`);
   // 密钥文件不在 git 里，要单独复制过去；复制前确认它在新工作区里也是被忽略的（这是公开仓库）
   const envSrc = path.join(REPO, ".env");
   if (fs.existsSync(envSrc)) {
@@ -99,7 +108,7 @@ const rules = (branch, dir) => `You are running UNATTENDED as this team's engine
 
 Workspace rules:
 - Work only inside ${dir}. It is a git worktree checked out on branch "${branch}". Do not touch files outside it, other worktrees, or other branches.
-- Commit in small steps on this branch; each commit should leave the app runnable. Never push, never switch branches, never rewrite history, never change git remotes.
+- Commit in small steps on this branch; each commit should leave the app runnable. Never push, never rewrite history, never change git remotes. Stay on this branch unless the task file itself tells you to continue on another branch under some condition; in that case commit first, create that branch from your current commit inside this same directory (git switch -c <name>), and keep working there. Never check out main or any branch the task did not name.
 - All API keys are in .env in this directory. Never print them, never copy them into code, logs, commit messages or reports, and never edit .env. This is a public repository.
 - A service may have several keys (NAME, NAME_2, NAME_3 ...). Always go through the project's helpers — keys.js (withKey / fetchWithKey) in JavaScript and keyring.py (KeyRing) in Python — so a key that is out of credit is replaced by the next one automatically. Add any new external service the same way.
 - Long-running commands (servers, video generation) must be started in the background and stopped when you are done; do not leave a command that waits forever in the foreground.
@@ -173,7 +182,7 @@ export async function runRound({ queryFn, prompt, options, onEvent }) {
 }
 
 // ---------------------------------------------------------------- 主循环：一轮一轮跑，按需换密钥
-export async function runAgent({ args, keys, task, dir, queryFn, baseEnv = process.env, log = console.log, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+export async function runAgent({ args, keys, task, dir, queryFn, baseEnv = process.env, log = console.log, onStderr, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   let state = args.fresh ? { sessionId: null, keyIndex: 0, spentUsd: 0, rounds: 0, done: false } : loadState(args.branch);
   if (state.done && !args.fresh) { log(`这个分支的任务上次已经完成（.agent 里有记录）。要重新做，加 --fresh。`); return state; }
   let keyIndex = Math.min(state.keyIndex || 0, keys.length - 1);
@@ -182,15 +191,22 @@ export async function runAgent({ args, keys, task, dir, queryFn, baseEnv = proce
   let reason = "";
   const guard = makeGuard(dir);
   const firstPrompt = `Your task is below. Read it fully, then carry it out in this repository.\n\n<task file="${path.basename(args.prompt)}">\n${task}\n</task>`;
+  const taskHash = crypto.createHash("sha1").update(task).digest("hex");
 
   for (let round = 0; round < 60; round++) {
+    const capped = Number.isFinite(args.maxUsd);
+    const capText = capped ? ` / $${args.maxUsd}` : "（无上限）";
     const left = args.maxUsd - state.spentUsd;
     if (left <= 0.05) { log(`已到花费上限 $${args.maxUsd}（已花约 $${state.spentUsd.toFixed(2)}）。要继续请调大 --max-usd 再运行。`); break; }
     const resuming = Boolean(state.sessionId);
     const prompt = !resuming
       ? (state.rounds ? `${firstPrompt}\n\nNote: an earlier run already worked on this branch but its conversation is not available. Check \`git log\` and the files first, then continue from there instead of starting over.` : firstPrompt)
-      : `Continue the task from exactly where you stopped${reason ? ` (the previous run was interrupted: ${reason})` : ""}. Do not redo finished work; check \`git status\` and \`git log\` if unsure.`;
-    log(`\n=== 第 ${state.rounds + 1} 轮 · 密钥 ${keyIndex + 1}/${keys.length} · ${resuming ? "接着上次的对话" : "新对话"} · 已花约 $${state.spentUsd.toFixed(2)} / $${args.maxUsd} ===`);
+      : `Continue the task from exactly where you stopped${reason ? ` (the previous run was interrupted: ${reason})` : ""}. Do not redo finished work; check \`git status\` and \`git log\` if unsure.` +
+        // 任务文件在两轮之间被改过：把新版本完整发一遍
+        (state.taskHash !== taskHash ? `\n\nThe team has UPDATED the task file since you last read it. The full current version is below and replaces the earlier one. Work you already finished stays; follow the new or changed instructions from here on.\n\n<task file="${path.basename(args.prompt)}">\n${task}\n</task>` : "");
+    if (resuming && state.taskHash !== taskHash) log("（任务文件有更新，已把新版本发给智能体）");
+    state.taskHash = taskHash;
+    log(`\n=== 第 ${state.rounds + 1} 轮 · 密钥 ${keyIndex + 1}/${keys.length} · ${resuming ? "接着上次的对话" : "新对话"} · 已花约 $${state.spentUsd.toFixed(2)}${capText} ===`);
 
     const env = { ...baseEnv, ANTHROPIC_API_KEY: keys[keyIndex] };
     for (const k of ["ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_BASE_URL"]) delete env[k]; // 一定用这个密钥付费，不用本机登录的账户
@@ -203,12 +219,13 @@ export async function runAgent({ args, keys, task, dir, queryFn, baseEnv = proce
         env,
         resume: state.sessionId || undefined,
         maxTurns: args.maxTurns,
-        maxBudgetUsd: Number(left.toFixed(2)),
+        ...(capped ? { maxBudgetUsd: Number(left.toFixed(2)) } : {}),
         permissionMode: "bypassPermissions",
         allowDangerouslySkipPermissions: true,
         settingSources: ["project"],
         systemPrompt: { type: "preset", preset: "claude_code", append: rules(args.branch, dir) },
         hooks: { PreToolUse: [{ hooks: [guard] }] },
+        stderr: (text) => onStderr?.(text),
       },
       onEvent: (kind, text) => {
         if (kind === "session") { if (text && text !== state.sessionId) { state.sessionId = text; saveState(args.branch, { ...state, keyIndex }); } }
@@ -245,9 +262,31 @@ export async function runAgent({ args, keys, task, dir, queryFn, baseEnv = proce
 }
 
 // ---------------------------------------------------------------- 入口
+// 退出码：0 = 任务完成；3 = 有意停下（密钥全部用完 / 到了花费上限 / 配置有问题），重启也没用；
+//        其他 = 程序自己意外退出（崩溃、被系统杀掉）→ 外层的看护进程会自动重启，从存档接着做。
+const EXIT_DONE = 0, EXIT_STOP = 3;
+
+// 看护进程：把真正干活的进程当子进程启动，意外退出就重启
+async function supervise(argv) {
+  const script = fileURLToPath(import.meta.url);
+  for (let restarts = 0; ; restarts++) {
+    const code = await new Promise((resolve) => {
+      const child = spawn(process.execPath, [script, ...argv, "--child"], { stdio: "inherit" });
+      child.on("exit", (c, signal) => resolve(c ?? (signal ? 1 : 0)));
+      child.on("error", () => resolve(1));
+    });
+    if (code === EXIT_DONE || code === EXIT_STOP) return code;
+    if (restarts >= 30) { console.error(`\n❌ 已经自动重启 ${restarts} 次，不再重试（最后的退出码 ${code}）。`); return EXIT_STOP; }
+    console.error(`\n⚠️ 运行程序意外退出（退出码 ${code}）。30 秒后自动重启并接着做（第 ${restarts + 1} 次）。`);
+    await new Promise((r) => setTimeout(r, 30000));
+  }
+}
+
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  if (args.help) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1, 26).map((l) => l.replace(/^\/\/ ?/, "")).join("\n")); return; }
+  const argv = process.argv.slice(2);
+  const args = parseArgs(argv);
+  if (args.help) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1, 30).map((l) => l.replace(/^\/\/ ?/, "")).join("\n")); return; }
+  if (!args.child && !args.dryRun && !args.noSupervise) { process.exitCode = await supervise(argv); return; }
 
   const promptPath = path.resolve(process.cwd(), args.prompt);
   if (!fs.existsSync(promptPath)) throw new Error(`找不到任务文件：${promptPath}`);
@@ -260,7 +299,7 @@ async function main() {
 
   console.log(`任务文件：${promptPath}（${task.length} 字）`);
   console.log(`分支：${args.branch}（从 ${args.base} 分出）  模型：${args.model}`);
-  console.log(`Claude 密钥：${keys.length} 个  花费上限：$${args.maxUsd}  每轮步数上限：${args.maxTurns}`);
+  console.log(`Claude 密钥：${keys.length} 个  花费上限：${Number.isFinite(args.maxUsd) ? `$${args.maxUsd}` : "无（用完一个密钥换下一个）"}  每轮步数上限：${args.maxTurns}`);
   if (!keys.length) throw new Error(".env 里的 ANTHROPIC_API_KEY（以及 _2、_3 …）都是空的。填上至少一个再运行。");
   if (args.dryRun) { console.log("（--dry-run：到此为止，没有调用模型，也没有建工作区）"); return; }
 
@@ -268,19 +307,21 @@ async function main() {
   console.log(`工作区：${dir}`);
   fs.mkdirSync(STATE_DIR, { recursive: true });
   const logFile = path.join(STATE_DIR, `${args.branch.replace(/[^\w.-]+/g, "_")}.log`);
-  const log = (text) => {
-    const clean = scrub(text);
-    console.log(clean);
-    fs.appendFileSync(logFile, `${new Date().toISOString()} ${clean}\n`);
-  };
+  const toFile = (text) => { try { fs.appendFileSync(logFile, `${new Date().toISOString()} ${scrub(text)}\n`); } catch {} };
+  const log = (text) => { console.log(scrub(text)); toFile(text); };
+  // 意外崩溃时把原因写进日志，再以“非 0 / 非 3”退出，让看护进程重启
+  for (const ev of ["uncaughtException", "unhandledRejection"]) {
+    process.on(ev, (e) => { toFile(`[crash] ${ev}: ${e?.stack || e}`); console.error(scrub(`\n[crash] ${e?.message || e}`)); process.exit(1); });
+  }
+  process.on("exit", (code) => toFile(`[exit] code ${code}`));
 
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
-  const state = await runAgent({ args, keys, task, dir, queryFn: query, log });
+  const state = await runAgent({ args, keys, task, dir, queryFn: query, log, onStderr: (t) => toFile(`[stderr] ${String(t).trimEnd()}`) });
   log(`\n本次结束：共 ${state.rounds} 轮，估算花费约 $${state.spentUsd.toFixed(2)}。`);
   log(`查看结果：cd "${dir}"，然后 git log --oneline；报告在 AGENT_REPORT.md。日志：${logFile}`);
-  if (!state.done) process.exitCode = 1;
+  process.exitCode = state.done ? EXIT_DONE : EXIT_STOP;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(`\n❌ ${e.message}`); process.exit(2); });
+  main().catch((e) => { console.error(`\n❌ ${e.message}`); process.exit(EXIT_STOP); });
 }

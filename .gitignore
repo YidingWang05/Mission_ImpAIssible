@@ -1,7 +1,6 @@
 node_modules/
-output/
+
 .env
 .DS_Store
 .venv/
-.agent/
 __pycache__/

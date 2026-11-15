@@ -1,0 +1,289 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-14T22-18-37-602Z-1f2fae",
+  "tutorial_id": "2026-11-14T22-18-37-602Z-1f2fae",
+  "generated_at": "2026-11-14T22:18:37.602Z",
+  "language": {
+    "code": "es",
+    "name": "Spanish"
+  },
+  "safety": "ok",
+  "recognized": true,
+  "appliance_native": "Microondas de sobremesa",
+  "appliance_en": "Countertop microwave oven",
+  "brand": "IKEA",
+  "model": "TILLREDA (white, 20 L, 700 W)",
+  "model_confidence": "medium",
+  "goal_native": "Recalentar comida",
+  "goal_en": "Reheat food",
+  "intro_native": "Este parece un microondas IKEA TILLREDA blanco, con dos ruedas y un botón redondo. Vamos a aprender a recalentar comida paso a paso.",
+  "intro_en": "This looks like a white IKEA TILLREDA microwave, with two dials and a round button. Let's learn how to reheat food step by step.",
+  "buttons": [
+    {
+      "id": "b1",
+      "panel_text": "Min · ❄ · Med · • · Max",
+      "name_native": "Rueda de potencia",
+      "name_en": "Power dial",
+      "function_native": "Elige la fuerza del calor. Max sirve para recalentar y el copo de nieve para descongelar.",
+      "function_en": "Sets the heating power. Max is for reheating; the snowflake is for defrosting.",
+      "box": {
+        "x": 712,
+        "y": 476,
+        "w": 66,
+        "h": 54
+      }
+    },
+    {
+      "id": "b2",
+      "panel_text": "Clock icon, 0–30 (minutes)",
+      "name_native": "Rueda del tiempo",
+      "name_en": "Timer dial",
+      "function_native": "Elige los minutos. Al girarla, el microondas empieza solo y para en 0 con un 'dong'.",
+      "function_en": "Sets the minutes. Turning it starts the oven; it stops at 0 with a 'dong'.",
+      "box": {
+        "x": 698,
+        "y": 569,
+        "w": 62,
+        "h": 53
+      }
+    },
+    {
+      "id": "b3",
+      "panel_text": "Round button (no label)",
+      "name_native": "Botón para abrir la puerta",
+      "name_en": "Door release button",
+      "function_native": "Al pulsarlo, se abre la puerta.",
+      "function_en": "Press it to open the door.",
+      "box": {
+        "x": 696,
+        "y": 667,
+        "w": 56,
+        "h": 44
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "button_id": "b3",
+      "action_native": "Pulsa el botón redondo para abrir la puerta",
+      "action_en": "Press the round button to open the door",
+      "narration_native": "Mira el panel blanco de la derecha. Abajo del todo hay un botón redondo. Púlsalo y la puerta se abrirá.",
+      "narration_en": "Look at the white panel on the right. At the very bottom there is a round button. Press it and the door will open.",
+      "sources": [
+        "https://www.ikea.com.cy/en/products/tillreda-microwave-oven/60493358/",
+        "https://www.ikea.com/gb/en/p/tillreda-microwave-oven-white-60493358/",
+        "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482"
+      ]
+    },
+    {
+      "step": 2,
+      "button_id": null,
+      "action_native": "Pon la comida en un plato apto para microondas",
+      "action_en": "Put the food in a microwave-safe dish",
+      "narration_native": "Comprueba que el plato de cristal giratorio está dentro. Pon la comida en un recipiente apto para microondas, nunca de metal. Colócalo en el centro.",
+      "narration_en": "Check that the glass turntable is inside. Put the food in a microwave-safe container, never metal. Place it in the middle.",
+      "sources": [
+        "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 3,
+      "button_id": null,
+      "action_native": "Cierra la puerta",
+      "action_en": "Close the door",
+      "narration_native": "Empuja la puerta negra hasta que haga clic. El microondas no debe funcionar con la puerta abierta.",
+      "narration_en": "Push the black door until it clicks. The microwave must never run with the door open.",
+      "sources": [
+        "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482"
+      ]
+    },
+    {
+      "step": 4,
+      "button_id": "b1",
+      "action_native": "Gira la rueda de arriba hasta Max",
+      "action_en": "Turn the top dial to Max",
+      "narration_native": "La rueda de arriba es la potencia. Gírala hacia la derecha, hasta la palabra Max. Max es lo mejor para recalentar.",
+      "narration_en": "The top dial is the power. Turn it to the right, to the word Max. Max is best for reheating.",
+      "sources": [
+        "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 5,
+      "button_id": "b2",
+      "action_native": "Gira la rueda del medio hasta los minutos que quieras",
+      "action_en": "Turn the middle dial to the minutes you want",
+      "narration_native": "La rueda del medio, con el dibujo de un reloj, es el tiempo. Gírala hasta los minutos que necesites, por ejemplo 2. El microondas empieza solo, no hay botón de inicio.",
+      "narration_en": "The middle dial, with the clock picture, is the time. Turn it to the minutes you need, for example 2. The microwave starts by itself; there is no start button.",
+      "sources": [
+        "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 6,
+      "button_id": null,
+      "action_native": "Espera al sonido 'dong'",
+      "action_en": "Wait for the 'dong' sound",
+      "narration_native": "Cuando el tiempo llega a cero, suena un 'dong' y el microondas se para. Si quieres parar antes, gira la rueda del tiempo a 0.",
+      "narration_en": "When the time reaches zero, you hear a 'dong' and the microwave stops. To stop early, turn the timer dial back to 0.",
+      "sources": [
+        "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 7,
+      "button_id": "b3",
+      "action_native": "Pulsa el botón redondo y saca la comida",
+      "action_en": "Press the round button and take out the food",
+      "narration_native": "Pulsa otra vez el botón redondo de abajo para abrir. Saca el plato con cuidado, puede estar caliente.",
+      "narration_en": "Press the round button at the bottom again to open. Take the dish out carefully; it may be hot.",
+      "sources": [
+        "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+        "https://www.ikea.com.cy/en/products/tillreda-microwave-oven/60493358/"
+      ]
+    },
+    {
+      "step": 8,
+      "button_id": "b2",
+      "action_native": "Deja la rueda del tiempo en 0",
+      "action_en": "Leave the timer dial at 0",
+      "narration_native": "Comprueba que la rueda del tiempo está en 0. Así el microondas no se enciende vacío por accidente.",
+      "narration_en": "Check that the timer dial is at 0. That way the microwave won't start empty by accident.",
+      "sources": [
+        "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    }
+  ],
+  "tips": [
+    {
+      "native": "Este microondas tiene solo 700 W. La comida puede tardar un poco más que en otros microondas.",
+      "en": "This microwave is only 700 W. Food may take a bit longer than in other microwaves."
+    },
+    {
+      "native": "La rueda del tiempo no es muy exacta con tiempos cortos. Para bebidas o porciones pequeñas, pon un poco menos de tiempo y vigila.",
+      "en": "The timer isn't very precise for short times. For drinks or small portions, set a little less and keep an eye on it."
+    },
+    {
+      "native": "Para descongelar, pon la rueda de arriba en el copo de nieve y luego elige el tiempo.",
+      "en": "To defrost, set the top dial to the snowflake, then choose the time."
+    },
+    {
+      "native": "Para saber si un plato sirve: ponlo vacío con un vaso de agua fría 1 minuto en Max. Si el plato se calienta, no lo uses.",
+      "en": "To test a dish: put it in empty with a cup of cold water for 1 minute on Max. If the dish gets warm, don't use it."
+    },
+    {
+      "native": "Es normal que la luz se vea más débil con potencias bajas.",
+      "en": "It's normal for the light to look dimmer at low power."
+    }
+  ],
+  "warnings": [
+    {
+      "native": "Nunca metas metal: ni papel de aluminio, ni cubiertos, ni platos con bordes dorados.",
+      "en": "Never put metal inside: no foil, cutlery, or dishes with gold rims."
+    },
+    {
+      "native": "No lo enciendas vacío; puede estropearse.",
+      "en": "Don't run it empty; it can be damaged."
+    },
+    {
+      "native": "Si la puerta está dañada o no cierra bien, no lo uses. No abras la carcasa ni intentes repararlo: contacta con el servicio oficial de IKEA o con tu casero.",
+      "en": "If the door is damaged or doesn't close properly, don't use it. Don't open the casing or try to repair it: contact IKEA's official support or your landlord."
+    }
+  ],
+  "closing_native": "¡Muy bien! Ya sabes recalentar comida con este microondas. Recuerda dejar siempre la rueda del tiempo en 0.",
+  "closing_en": "Well done! Now you know how to reheat food with this microwave. Remember to always leave the timer dial at 0.",
+  "sources": [
+    {
+      "id": 1,
+      "title": "IKEA TILLREDA MANUAL Pdf Download",
+      "url": "https://www.manualslib.com/manual/3010000/Ikea-Tillreda.html",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 2,
+      "title": "IKEA TILLREDA 204.933.60 Instructions Manual (Page 21 of 32)",
+      "url": "https://www.manualslib.com/manual/2111725/Ikea-Tillreda-204-933-60.html?page=21",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 3,
+      "title": "IKEA TILLREDA Microwave Oven - User Manual and Specifications",
+      "url": "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 4,
+      "title": "IKEA TILLREDA 304.931.09 Microwave Oven User Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 5,
+      "title": "IKEA TILLREDA Microwave Oven User Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/tillreda-microwave-oven-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 6,
+      "title": "TILLREDA Microwave Oven User Manual",
+      "url": "https://manuals.plus/m/1d336a5ac54101e2bdda44b44bbf998d2dd8f7423406cb5b1c8d7449670f2f0b",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 7,
+      "title": "IKEA TILLREDA Portable Induction Hob Instruction Manual",
+      "url": "https://manuals.plus/m/d64407ef82320add40d3e17380e277f659a2c2dc8aeac120f74fb3cfb32119ae",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 8,
+      "title": "IKEA Tillreda Portable induction hob Owner's Manual",
+      "url": "https://manuals.plus/m/7ff04dc73441f6128680d366961c36023cf0c7b9c9d7d70beb4fa03d45a59a7e",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 9,
+      "title": "Manuals+ Home › Ikea › IKEA TILLREDA User Manual IKEA TILLREDA User Manual",
+      "url": "https://manuals.plus/ikea/ikea-tillreda-manual.pdf",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 10,
+      "title": "IKEA TILLREDA Portable Induction Hob User Manual",
+      "url": "https://manuals.plus/m/7d8d8026d63dd0523a48cf7acfaa373342efce64dbf5d79786c7a8af60a66c77",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 11,
+      "title": "TILLREDA microwave oven 60493358",
+      "url": "https://www.ikea.com.cy/en/products/tillreda-microwave-oven/60493358/",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 12,
+      "title": "TILLREDA microwave oven, white - IKEA UK",
+      "url": "https://www.ikea.com/gb/en/p/tillreda-microwave-oven-white-60493358/",
+      "kind": "web",
+      "cited": false
+    }
+  ]
+}
