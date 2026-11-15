@@ -1,3 +1,4 @@
+import { boxCenter } from "./boxes.js";
 // 家电小老师 —— 前端
 // 输入：① 家电照片 ② 语言 ③ 用户的疑问
 // 流程：Ava 打招呼 → 拍照（+ 可选疑问）→ 服务端先做安全红线检查，再识别型号并联网查资料，生成步骤 JSON（只用 ①②）
@@ -79,13 +80,14 @@ async function init() {
     $("#demo-note").textContent = "演示模式 · " + parts.join("；");
     $("#demo-note").hidden = false;
   }
-  $("#btn-sample").hidden = !d.claude;
-  $("#btn-sample-danger").hidden = !d.claude;
+  // 示例按钮一直显示：微波炉（预生成好的视频 + 旁白，没有时服务器退回演示面板）、燃气锅炉（红线）
+  $("#btn-sample").hidden = false;
+  $("#btn-sample-danger").hidden = false;
 
   $("#btn-start").onclick = start;
   $("#photo").onchange = onPhoto;
   $("#btn-analyze").onclick = () => analyze();
-  $("#btn-sample").onclick = () => analyze({ sample: "washer" });
+  $("#btn-sample").onclick = () => analyze({ sample: "microwave" });
   $("#btn-sample-danger").onclick = () => analyze({ sample: "boiler" });
   $("#btn-play").onclick = togglePlay;
   // 开始打字提问就自动暂停；什么都没问就接着播
@@ -377,9 +379,11 @@ async function enterLesson(imgSrc) {
   clearZoom();
   drawOverlay({});
   // 步骤时间标记（真实视频做好前由服务端按讲解词长度估算）
+  player.clips = {};
   if (!blocked() && g.steps.length) {
-    try { player.chapters = (await fetch(`/api/render/${g.id}`).then((r) => r.json())).chapters || []; } catch {}
+    try { applyManifest(await fetch("/api/render", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tutorial_id: g.id }) }).then((r) => r.json())); } catch {}
     if (player.chapters.length !== g.steps.length) player.chapters = g.steps.map((_, i) => ({ step: i + 1, start: i, end: i + 1, ready: true }));
+    pollRender(g.id);
   }
   renderChapters();
 
@@ -455,11 +459,16 @@ async function goto(i, { keepRange = false } = {}) {
     : "";
   renderStepList();
   drawOverlay({ target: s?.button_id || null });
+  if (!s) playClip(null);
   renderChapters(0);
 
   let result;
   if (state.step === -1) result = await speakLine(g.intro_native, g.intro_en);
-  else if (s) result = await speakLine(s.narration_native, s.narration_en, renderChapters);
+  else if (s) {
+    const clip = playClip(state.step + 1);
+    result = await speakLine(s.narration_native, s.narration_en, renderChapters);
+    if (result === "done" || result === "timeout") await clip; // 旁白说完，等这一步的视频也播完
+  }
   else result = await speakLine(g.closing_native, g.closing_en);
   if (gen !== state.gen) return;
   // 会话在这一段中途被断开（到了时长上限）→ 开新会话把这一段重讲一遍；同一段连续断两次就停下等用户
@@ -498,6 +507,37 @@ async function goto(i, { keepRange = false } = {}) {
   await sleep(500);
   if (gen !== state.gen) return;
   goto(state.step + 1, { keepRange: true }); // 下一段开始前 speakLine 会检查会话，必要时换新会话
+}
+
+// ---------- 视频片段：后台轮询清单，做好一步就能播一步（每步小视频 + 播放列表）----------
+function applyManifest(m) {
+  if (!m?.chapters) return;
+  player.manifest = m;
+  for (const c of m.clips || []) player.clips[c.step] = c.url;
+  // 步骤标记：有真实时间就用，没有（还在生成）就按步骤等分
+  const timed = m.chapters.every((c) => c.start != null);
+  player.chapters = m.chapters.map((c, i) => (timed ? c : { step: c.step, start: i, end: i + 1, ready: c.ready }));
+}
+async function pollRender(id) {
+  clearTimeout(player.pollTimer);
+  if (!state.guide || state.guide.id !== id || !lessonActive()) return;
+  if (player.manifest && player.manifest.status !== "rendering") return;
+  try { applyManifest(await fetch(`/api/render/${id}`).then((r) => r.json())); renderChapters(); } catch {}
+  player.pollTimer = setTimeout(() => pollRender(id), 4000);
+}
+// 播这一步的视频（静音，旁白由 Ava / ElevenLabs 说）；没做好就显示照片 + 标注
+function playClip(step) {
+  const v = $("#stage-video");
+  const url = step != null && player.clips?.[step];
+  if (!url) { v.pause(); v.hidden = true; return Promise.resolve(); }
+  v.hidden = false;
+  if (!v.src.endsWith(url)) v.src = url;
+  v.currentTime = 0;
+  return new Promise((res) => {
+    const t = setTimeout(res, 15000);
+    v.onended = () => { clearTimeout(t); res(); };
+    v.play().catch(() => { clearTimeout(t); res(); });
+  });
 }
 
 // ---------- 播放器：步骤标记 / 暂停 / 继续 / 只播一段 ----------
@@ -560,6 +600,7 @@ function pauseForQuestion() {
     player.playing = false;
     player.after = { kind: "resume" };
     state.gen++; // 取消“自动播下一步”
+    $("#stage-video").pause();
     state.avatar.interrupt();
   }
   renderChapters();
@@ -595,7 +636,7 @@ function zoomTo(id) {
   const b = state.guide.buttons.find((x) => x.id === id);
   if (!b) return;
   const s = Math.max(1.5, Math.min(3, 1000 / (Math.max(b.box.w, 40) * 4), 1000 / (Math.max(b.box.h, 40) * 3.5))); // 按钮约占画面宽度的 1/4
-  const cx = (b.box.x + b.box.w / 2) / 10, cy = (b.box.y + b.box.h / 2) / 10; // 按钮中心（百分比）
+  const c = boxCenter(b.box), cx = c.x * 100, cy = c.y * 100; // 按钮中心（百分比），统一换算见 boxes.js
   const tx = Math.min(0, Math.max(100 - 100 * s, 50 - cx * s));                // 把按钮移到画面中间，但不露出黑边
   const ty = Math.min(0, Math.max(100 - 100 * s, 50 - cy * s));
   $("#zoomer").style.transform = `translate(${tx}%, ${ty}%) scale(${s})`;
@@ -1113,9 +1154,26 @@ class FallbackAvatar {
     try { rec.start(); } catch {}
   }
 
+  #audio = null;
   say(text, onProgress) {
     this.interrupt();
     return new Promise((resolve) => {
+      // 先用 ElevenLabs 的多语言旁白（服务器缓存同一句话），失败再退回浏览器朗读
+      const mine = { resolve };
+      this.#pending = mine;
+      const a = (this.#audio = new Audio(`/api/tts?text=${encodeURIComponent(text)}`));
+      const finish = (reason) => this.#pending === mine && this.#done(reason);
+      mine.timer = setTimeout(() => finish("timeout"), 8000 + text.length * 300);
+      a.ontimeupdate = () => a.duration && onProgress?.(Math.round((a.currentTime / a.duration) * text.length));
+      a.onended = () => finish("done");
+      a.onerror = () => { if (this.#pending !== mine) return; clearTimeout(mine.timer); this.#pending = null; this.#browserSay(text, onProgress, resolve); };
+      $("#avatar").classList.add("speaking");
+      a.play().catch(() => a.onerror());
+    });
+  }
+
+  #browserSay(text, onProgress, resolve) {
+    {
       if (!("speechSynthesis" in window)) return setTimeout(() => resolve("done"), 1500);
       const u = new SpeechSynthesisUtterance(text);
       u.voice = speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith(this.#lang)) || null;
@@ -1131,7 +1189,7 @@ class FallbackAvatar {
       u.onerror = () => finish("error");
       $("#avatar").classList.add("speaking");
       speechSynthesis.speak(u);
-    });
+    }
   }
 
   sendText(text) { this.onUserText?.(text); }
@@ -1139,6 +1197,7 @@ class FallbackAvatar {
   interrupt() {
     if (!this.#pending) return;
     speechSynthesis.cancel();
+    this.#audio?.pause();
     this.#done("interrupted");
   }
 

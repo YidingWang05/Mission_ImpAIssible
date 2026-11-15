@@ -6,7 +6,7 @@ For each step, in order:
   1. start frame = the user's photo (step 1) or the LAST frame of the previous
      step's clip, so the appliance state carries over (door opened in step 1 is
      still open when food goes in in step 2, ...)
-  2. a vision LLM on fal (Claude Sonnet via fal-ai/any-llm/vision) looks at the
+  2. Claude (direct Anthropic API, ANTHROPIC_API_KEY*) looks at the
      start frame + the step from the JSON and writes an image-to-video prompt
   3. fal image-to-video (Kling 2.5 Turbo Pro by default) animates the photo:
      a real hand presses / turns / opens exactly what the step says
@@ -23,17 +23,20 @@ Usage:
   # the run delivered in this session also used:  --trim 7=8.0
 """
 import argparse, hashlib, json, os, re, subprocess, sys
-from PIL import Image
+from PIL import Image, ImageOps
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fal_api as F
+import claude_api as C
+from boxes import box_center
+import spend
 
 VIDEO_MODELS = {
     "kling25": "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
     "kling21": "fal-ai/kling-video/v2.1/standard/image-to-video",
 }
-LLM = "fal-ai/any-llm/vision"
-LLM_MODEL = "anthropic/claude-sonnet-4.5"
+LLM = "anthropic"
+LLM_MODEL = os.environ.get("PLANNER_MODEL", "claude-sonnet-5-5")
 NEGATIVE = ("blurry, distorted hands, extra fingers, two hands, second hand, transparent door, see-through door, deformed fingers, morphing appliance, changing kitchen, "
             "text, captions, watermark, camera shake, zoom, cut")
 
@@ -62,9 +65,7 @@ def box_hint(guide, b, img_w, img_h):
     bx = b.get("box")
     if not bx:
         return ""
-    mx = max(bx["x"] + bx["w"], bx["y"] + bx["h"])
-    sx, sy = (1000, 1000) if (mx <= 1000 and max(img_w, img_h) > 1000) else (img_w, img_h)
-    cx, cy = (bx["x"] + bx["w"] / 2) / sx, (bx["y"] + bx["h"] / 2) / sy
+    cx, cy = box_center(bx)
     return f" Its centre is at about {cx:.0%} from the left and {cy:.0%} from the top of the image."
 
 
@@ -78,14 +79,12 @@ def plan_step(cache, guide, step, frame_uri, prev_end, img_size, orig_uri=None):
            f'Goal: {guide["goal_en"]}\nAll steps:\n{all_steps}\n\n'
            f'CURRENT STEP {step["step"]}: {step["action_en"]}\nInstruction text: {step["narration_en"]}\n{target}\n'
            f'State at the start of this clip: {prev_end or "as in the photo"}')
-    args = {"model": LLM_MODEL, "system_prompt": PLANNER, "prompt": ctx, "max_tokens": 600}
-    if orig_uri and orig_uri != frame_uri:
-        args["image_urls"] = [frame_uri, orig_uri]
-        args["prompt"] += "\n\nImage 1 = first frame of this clip. Image 2 = the ORIGINAL photo (reference for the appliance's true look)."
-    else:
-        args["image_url"] = frame_uri
+    imgs = [frame_uri] + ([orig_uri] if orig_uri and orig_uri != frame_uri else [])
+    if len(imgs) > 1:
+        ctx += "\n\nImage 1 = first frame of this clip. Image 2 = the ORIGINAL photo (reference for the appliance's true look)."
+    args = {"model": LLM_MODEL, "system": PLANNER, "prompt": ctx, "images": imgs, "max_tokens": 2000}
     k = key(LLM, args)
-    r = cache.get(k) or cache.put(k, F.run(LLM, args))
+    r = cache.get(k) or cache.put(k, {"output": C.ask(**args)})
     txt = r["output"]
     m = re.search(r"\{.*\}", txt, re.S)
     plan = json.loads(m.group(0))
@@ -113,7 +112,7 @@ class Cache:
 
 
 def prep_frame(src, dst, long_side=1280):
-    im = Image.open(src).convert("RGB")
+    im = ImageOps.exif_transpose(Image.open(src)).convert("RGB")  # phone photos: honour EXIF rotation
     s = long_side / max(im.size)
     if s < 1:
         im = im.resize((round(im.width * s), round(im.height * s)), Image.LANCZOS)
@@ -132,10 +131,7 @@ def closeup(guide, step, video, out, img_size, frac=0.42):
     b = {x["id"]: x for x in guide.get("buttons", [])}.get(step.get("button_id"))
     if not b or not b.get("box"):
         return None
-    bx = b["box"]
-    mx = max(bx["x"] + bx["w"], bx["y"] + bx["h"])
-    sx, sy = (1000, 1000) if (mx <= 1000 and max(img_size) > 1000) else img_size
-    cx, cy = (bx["x"] + bx["w"] / 2) / sx, (bx["y"] + bx["h"] / 2) / sy
+    cx, cy = box_center(b["box"])
     vw, vh = map(int, subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
                                       "stream=width,height", "-of", "csv=p=0", video],
                                      capture_output=True, text=True).stdout.strip().split(",")[:2])
@@ -173,7 +169,7 @@ def main():
     fdir = os.path.join(args.out, "_fal")
     cache = Cache(fdir)
     model = VIDEO_MODELS[args.model]
-    img_size = Image.open(args.photo).size
+    img_size = ImageOps.exif_transpose(Image.open(args.photo)).size
     only = {int(x) for x in args.only.split(",")} if args.only else None
 
     start = prep_frame(args.photo, os.path.join(fdir, "start_01.jpg"))
@@ -198,7 +194,12 @@ def main():
         if only and n not in only and not cache.get(k):
             print("  (skipped)")
             break
-        r = cache.get(k) or cache.put(k, F.run(model, vargs, timeout=1800))
+        r = cache.get(k)
+        if not r:
+            spend.guard(model, int(plan["duration"]))  # raises BudgetExceeded before any money is spent
+            job = F.submit(model, vargs)  # charged once submitted -> log it now, even if we get killed while waiting
+            spend.record(model, int(plan["duration"]), guide["id"], n)
+            r = cache.put(k, F.wait(job, timeout=1800))
         if not os.path.exists(out) or os.path.getsize(out) == 0:
             if n in trims:
                 raw = F.download(r["video"]["url"], os.path.join(fdir, f"step_{n:02d}_untrimmed.mp4"))
@@ -216,6 +217,7 @@ def main():
         cu = closeup(guide, st, out, out.replace(".mp4", "_closeup.mp4"), img_size)
         if cu:
             manifest["steps"][-1]["closeup_file"] = os.path.basename(cu)
+        json.dump(manifest, open(os.path.join(args.out, "manifest.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
         prev_end = plan.get("end_state")
         if not args.no_chain:
             start = prep_frame(last_frame(out, os.path.join(fdir, f"end_{n:02d}.jpg")),
