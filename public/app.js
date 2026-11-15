@@ -9,6 +9,9 @@ const $ = (s) => document.querySelector(s);
 const state = {
   cfg: null,
   lang: null,          // 用户在首页选的语言：界面文字一直用它
+  halted: false,       // 用户按了“停一下”：Ava 不出声，直到按“继续说”或用户做了别的操作
+  haltResume: null,    // 停下的时候在做什么（"lesson" 播讲解 / "line" 说一句话 / "after" 回答完等着继续）
+  lastLine: null,      // Ava 最近说的一句固定的话 { native, en, done }
   reply: null,         // Ava 说话和字幕用的语言：一开始等于 lang，之后跟着用户提问的语言走（自动检测）
   avatar: null,        // AnamAvatar（真实数字人）或 FallbackAvatar（演示）
   photo: null,         // { dataUrl, base64, mediaType }
@@ -83,7 +86,7 @@ async function init() {
   $("#btn-sample").onclick = () => analyze({ sample: "microwave" });
   $("#btn-sample-danger").onclick = () => analyze({ sample: "boiler" });
   $("#btn-play").onclick = togglePlay;
-  setupPtt();
+  $("#btn-hush").onclick = (e) => { e.stopPropagation(); hush(); };
   // 开始打字提问就自动暂停；什么都没问就接着播
   $("#ask").oninput = () => { if ($("#ask").value.trim() && lessonActive()) pauseForQuestion(); };
   $("#ask").onblur = () => {
@@ -150,7 +153,10 @@ async function start() {
   placeAvatar($("#hero-slot-2"));
   $("#greet-bubble").textContent = state.lang.greeting;
   // 真实数字人的问候由 persona 的 initialMessage 说出；演示数字人用朗读
-  if (!state.avatar.speaksGreetingItself) say(state.lang.greeting);
+  state.lastLine = { native: state.lang.greeting, en: "", done: false };
+  if (!state.avatar.speaksGreetingItself) say(state.lang.greeting).then((r) => { if (r !== "interrupted") state.lastLine.done = true; });
+  renderHush();
+  startCaptureListener();
   armIdleCut(30000); // 问候语说完会更早断开（见 onFreeSpeech）；这里兜底
 }
 
@@ -207,13 +213,13 @@ async function startIdleListener() {
   if (state.cfg.stt) {
     const token = (session.rec = { abort: sttStop });
     const ok = await sttStart({
-      onHear: () => renderListen("hear"),
+      onHear: () => { renderListen("hear"); showHeard("…", true); },
+      onPartial: (t) => showHeard(t, true),
       onText: (text, heard) => {
         if (session.rec !== token) return;
-        if (!text) return renderListen("standby"); // 只是噪音
+        if (!text) { showHeard(""); return renderListen("standby"); } // 只是噪音
         stopIdleListener();
-        showHeard(text);
-        userSays(text, heard);
+        heardSpeech(text, heard);
       },
     });
     if (session.rec !== token) { if (!session.rec) sttStop(); return; } // 等麦克风的时候已经不在待机了
@@ -227,8 +233,7 @@ async function startIdleListener() {
   rec.onresult = (e) => {
     const text = e.results[e.results.length - 1][0].transcript;
     stopIdleListener();
-    showHeard(text);
-    userSays(text);
+    heardSpeech(text);
   };
   rec.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") stopIdleListener(); };
   rec.onend = () => setTimeout(() => { if (session.rec === rec) try { rec.start(); } catch {} }, 300); // 一直听到有输入为止
@@ -242,10 +247,12 @@ function stopIdleListener() {
   try { rec?.abort(); } catch {}
 }
 
-// ---------- 语音识别：录下用户说的一句话 → /api/stt（ElevenLabs Scribe，自动识别语言）----------
-// 一直听麦克风的音量：声音明显高过环境噪音就开始录，安静 0.9 秒算说完，把这一句发给服务器。
-// 开头留 0.3 秒的预录，第一个字不会被切掉。handlers: { gate?, onHear?, onText(text, language) }
+// ---------- 语音识别：一直在听 → /api/stt（ElevenLabs Scribe，自动识别语言）----------
+// 一直听麦克风的音量：声音明显高过环境噪音就开始录，安静 0.6 秒算说完，把这一句发给服务器。
+// 说话过程中每隔 1 秒左右把已经录到的部分先送去识别一次（onPartial），页面上能马上看到字，不用等整句说完。
+// 开头留 0.35 秒的预录，第一个字不会被切掉。handlers: { gate?, onHear?, onPartial?(text), onText(text, language) }
 const mic = { stream: null, ctx: null, src: null, node: null, on: null };
+const STT = { block: 2048, endMs: 600, minMs: 300, maxMs: 15000, partialMs: 1000 };
 async function sttStart(handlers) {
   sttStop();
   try {
@@ -253,16 +260,17 @@ async function sttStart(handlers) {
     const ctx = (mic.ctx ||= new (window.AudioContext || window.webkitAudioContext)());
     if (ctx.state === "suspended") await ctx.resume();
     const src = (mic.src = ctx.createMediaStreamSource(mic.stream));
-    const node = (mic.node = ctx.createScriptProcessor(4096, 1, 1));
+    const node = (mic.node = ctx.createScriptProcessor(STT.block, 1, 1));
     const silent = ctx.createGain();
     silent.gain.value = 0; // 只分析，不把麦克风的声音放出来
     src.connect(node); node.connect(silent); silent.connect(ctx.destination);
-    const blockMs = (4096 / ctx.sampleRate) * 1000;
-    let floor = 0.01, pre = [], rec = null, quiet = 0, loud = 0;
+    const blockMs = (STT.block / ctx.sampleRate) * 1000;
+    const preBlocks = Math.ceil(350 / blockMs);
+    let floor = 0.01, pre = [], rec = null, quiet = 0, loud = 0, lastPartial = 0, busy = false;
     node.onaudioprocess = (e) => {
       const h = mic.on;
       if (!h) return;
-      if ((h.gate && !h.gate()) || ptt.rec) { rec = null; pre = []; loud = 0; return; } // Ava 自己在出声 / 用户正按着“按住说话”：不收音
+      if (h.gate && !h.gate()) { rec = null; pre = []; loud = 0; return; } // Ava 自己在出声：不收音
       const d = new Float32Array(e.inputBuffer.getChannelData(0));
       let sum = 0;
       for (let i = 0; i < d.length; i++) sum += d[i] * d[i];
@@ -271,18 +279,30 @@ async function sttStart(handlers) {
       if (!rec) {
         if (!voiced) floor = floor * 0.95 + rms * 0.05; // 跟着环境噪音慢慢调整
         pre.push(d);
-        if (pre.length > 4) pre.shift();
+        if (pre.length > preBlocks) pre.shift();
         loud = voiced ? loud + 1 : 0;
-        if (loud >= 2) { rec = pre; pre = []; quiet = 0; h.onHear?.(); }
+        if (loud >= 3) { rec = pre; pre = []; quiet = 0; lastPartial = performance.now(); h.onHear?.(); }
         return;
       }
       rec.push(d);
       quiet = voiced ? 0 : quiet + 1;
       const total = rec.length * blockMs, tail = quiet * blockMs;
-      if (tail < 900 && total < 15000) return;
+      if (tail < STT.endMs && total < STT.maxMs) {
+        // 还在说：先识别已经录到的部分，给页面一个中间结果
+        if (h.onPartial && !busy && total < 12000 && performance.now() - lastPartial > STT.partialMs) {
+          busy = true;
+          lastPartial = performance.now();
+          const mine = rec;
+          sttTranscribe(rec.slice(), ctx.sampleRate, true).then(
+            (o) => { busy = false; if (mic.on === h && rec === mine && o.text) h.onPartial(o.text); },
+            () => { busy = false; },
+          );
+        }
+        return;
+      }
       const blocks = rec;
       rec = null; loud = 0;
-      if (total - tail < 300) return h.onText?.("", null); // 太短：咳嗽、碰到桌子
+      if (total - tail < STT.minMs) return h.onText?.("", null); // 太短：咳嗽、碰到桌子
       sttSend(blocks, ctx.sampleRate, h);
     };
     mic.on = handlers;
@@ -301,7 +321,7 @@ function sttStop() {
   mic.node = mic.src = null;
 }
 
-async function sttTranscribe(blocks, rate) {
+async function sttTranscribe(blocks, rate, partial = false) {
   // 拼起来 → 降到 16 kHz 单声道 → WAV
   const n = blocks.reduce((a, b) => a + b.length, 0);
   const all = new Float32Array(n);
@@ -320,7 +340,7 @@ async function sttTranscribe(blocks, rate) {
   }
   let out = {};
   try {
-    const r = await fetch(`/api/stt?hint=${state.reply.code}`, { method: "POST", headers: { "Content-Type": "audio/wav" }, body: v.buffer });
+    const r = await fetch(`/api/stt?hint=${state.reply.code}${partial ? "&partial=1" : ""}`, { method: "POST", headers: { "Content-Type": "audio/wav" }, body: v.buffer });
     if (r.ok) out = await r.json();
   } catch (e) { console.warn("stt", e); }
   return { text: out.text || "", language: out.language || null };
@@ -331,104 +351,77 @@ async function sttSend(blocks, rate, h) {
   if (mic.on === h) h.onText?.(out.text, out.language);
 }
 
-// ---------- 按住说话（每个能输入文字的地方旁边都有一个 🎤）----------
-// 按住录音，松开识别；轻点一下 = 开始，再点一下 = 结束（不方便一直按着的时候用）。
-//   data-ptt="question"：拍照页，识别出的文字填进疑问框
-//   data-ptt="ask"：讲解页，当作用户说的话直接提问（讲解自动暂停）
-// 录音期间把 Ava 的麦克风静音，免得她同时也去回答一遍。
-const ptt = { rec: null, btn: null, t0: 0, latched: false };
-function setupPtt() {
-  document.querySelectorAll("[data-ptt]").forEach((btn) => {
-    const down = () => {
-      if (ptt.rec) { if (ptt.btn === btn && ptt.latched) pttStop(); return; }
-      pttStart(btn);
-    };
-    const up = () => {
-      if (ptt.btn !== btn || !ptt.rec || ptt.latched) return;
-      if (Date.now() - ptt.t0 < 350) { ptt.latched = true; return; } // 轻点：保持录音，等下一次点击
-      pttStop();
-    };
-    btn.addEventListener("pointerdown", (e) => { e.preventDefault(); try { btn.setPointerCapture(e.pointerId); } catch {} down(); });
-    btn.addEventListener("pointerup", up);
-    btn.addEventListener("pointercancel", up);
-    btn.addEventListener("contextmenu", (e) => e.preventDefault()); // 手机上长按不弹菜单
-    btn.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); down(); } });
-    btn.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); up(); } });
-  });
-}
-
-async function pttStart(btn) {
-  const rec = (ptt.rec = { blocks: [], rate: 16000, node: null, src: null, sr: null });
-  Object.assign(ptt, { btn, t0: Date.now(), latched: false });
-  btn.classList.add("on");
-  if (btn.dataset.ptt === "ask" && lessonActive()) {
-    pauseForQuestion();
-    clearTimeout(session.timer);
-    clearTimeout(player.timer);
-  }
-  state.avatar?.interrupt?.();
-  state.avatar?.muteMic?.(true);
-  if (!state.cfg.stt) return pttBrowser(rec);
-  try {
-    if (!mic.stream?.active) mic.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-    const ctx = (mic.ctx ||= new (window.AudioContext || window.webkitAudioContext)());
-    if (ctx.state === "suspended") await ctx.resume();
-    if (ptt.rec !== rec) return; // 等麦克风权限的时候已经松手了
-    rec.rate = ctx.sampleRate;
-    rec.src = ctx.createMediaStreamSource(mic.stream);
-    rec.node = ctx.createScriptProcessor(4096, 1, 1);
-    const silent = ctx.createGain();
-    silent.gain.value = 0;
-    rec.src.connect(rec.node); rec.node.connect(silent); silent.connect(ctx.destination);
-    rec.node.onaudioprocess = (e) => rec.blocks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-  } catch (e) {
-    console.warn("microphone unavailable", e?.name || e);
-    if (ptt.rec === rec) { pttStop(); renderListen("off"); }
-  }
-}
-
-// 没有服务器语音识别时：用浏览器自带的（只认当前语言）
-function pttBrowser(rec) {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { pttStop(); return renderListen("off"); }
-  const sr = new SR();
-  sr.lang = SR_LANG[state.reply.code] || state.reply.code;
-  let text = "";
-  rec.sr = sr;
-  rec.done = new Promise((resolve) => {
-    sr.onresult = (e) => { text = [...e.results].map((r) => r[0].transcript).join(" "); };
-    sr.onend = sr.onerror = () => resolve(text.trim());
-  });
-  try { sr.start(); } catch { pttStop(); }
-}
-
-async function pttStop() {
-  const rec = ptt.rec, btn = ptt.btn;
-  if (!rec) return;
-  ptt.rec = null;
-  btn.classList.remove("on");
-  try { rec.node?.disconnect(); rec.src?.disconnect(); } catch {}
-  if (rec.node) rec.node.onaudioprocess = null;
-  state.avatar?.muteMic?.(false);
-  const lesson = btn.dataset.ptt === "ask";
-  let text = "", heard = null;
-  btn.classList.add("busy");
-  showHeard("…", true);
-  if (lesson && lessonActive()) renderListen("thinking");
-  try {
-    if (rec.sr) { try { rec.sr.stop(); } catch {} text = await rec.done; }
-    else if ((rec.blocks.length * 4096) / rec.rate >= 0.3) ({ text, language: heard } = await sttTranscribe(rec.blocks, rec.rate));
-  } finally { btn.classList.remove("busy"); }
+// ---------- 听到一句话之后交给谁 ----------
+const captureActive = () => $("#screen-capture").classList.contains("active");
+function heardSpeech(text, heard) {
+  text = String(text || "").trim();
   showHeard(text);
-  if (!lesson) {
-    if (text) { const q = $("#question"); q.value = (q.value.trim() ? q.value.trim() + " " : "") + text; }
+  if (!text) return;
+  // “停 / 等一下”“继续”在哪一页都管用
+  if (text.length <= 14 && QUICK.pause.test(text)) return hush(true);
+  if (text.length <= 14 && QUICK.resume.test(text) && state.halted) return hush(false);
+  if (captureActive()) {
+    // 拍照页：说的话就是“对这个家电的疑问”，填进输入框（还可以再改）
+    const q = $("#question");
+    q.value = (q.value.trim() ? q.value.trim() + " " : "") + text;
     return;
   }
-  if (!lessonActive()) return;
-  if (text) return userSays(text, heard);
-  // 什么都没听到：回到原来的状态，接着播
-  renderListen(state.avatar?.listening ? "on" : state.avatar instanceof AnamAvatar && !state.avatar.connected ? "standby" : "off");
-  if (player.asking && state.mode !== "thinking" && state.mode !== "speaking") runAfter();
+  userSays(text, heard);
+}
+
+// 拍照页一直在听（不用按任何按钮）。这一页 Ava 自己的麦克风是关着的（见 AnamAvatar.connect），
+// 所以不会出现“她也回答一遍”；她自己出声的时候我们不收音，免得把她的话听进去。
+async function startCaptureListener() {
+  if (!state.cfg.stt || !(state.avatar instanceof AnamAvatar)) return; // 演示数字人自己有一个一直开着的识别
+  await sttStart({
+    gate: () => captureActive() && !state.busy && !state.avatar?.speaking,
+    onHear: () => showHeard("…", true),
+    onPartial: (t) => showHeard(t, true),
+    onText: (t, heard) => heardSpeech(t, heard),
+  });
+}
+
+// ---------- 随时让 Ava 停下 / 接着说 ----------
+// 停：马上闭嘴，讲解和视频也停住。继续：从停下的地方接着来 ——
+//   讲解播到一半 → 这一步从头重播；一句话说到一半（问候语、回答）→ 这句话重说一遍；回答完等着继续 → 接着播。
+// 用户做了别的操作（点下一步、提问…）就自动解除“停下”。
+function hush(stop = !state.halted) {
+  if (stop === state.halted) return;
+  state.halted = stop;
+  renderHush();
+  if (stop) {
+    const lesson = lessonActive() && state.guide && !blocked();
+    state.haltResume = lesson && player.playing ? "lesson" : state.lastLine && !state.lastLine.done ? "line" : lesson && (player.asking || player.after) ? "after" : null;
+    state.gen++; // 取消“说完自动接下一步”
+    clearTimeout(player.timer);
+    clearTimeout(session.timer);
+    if (lesson && player.playing) { player.playing = false; $("#stage-video").pause(); }
+    state.avatar?.interrupt();
+    free = { text: "", gen: -1 };
+    state.mode = "waiting";
+    if (lesson) renderChapters();
+    armIdleCut(20000);
+    return;
+  }
+  const how = state.haltResume;
+  state.haltResume = null;
+  if (how === "lesson") return resume();
+  if (how === "line") {
+    const l = state.lastLine, gen = ++state.gen;
+    return speakLine(l.native, l.en).then((r) => {
+      if (gen !== state.gen || r === "interrupted") return;
+      if (lessonActive() && state.guide) runAfter(); else armIdleCut();
+    });
+  }
+  if (lessonActive() && state.guide && !blocked()) runAfter();
+}
+
+function renderHush() {
+  const b = $("#btn-hush"), ui = state.lang.ui;
+  b.textContent = state.halted ? "▶" : "⏸";
+  b.classList.toggle("on", state.halted);
+  b.title = state.halted ? ui.resumeTalk : ui.stopTalk;
+  b.setAttribute("aria-label", b.title);
 }
 
 async function connectAvatar(opts) {
@@ -569,6 +562,9 @@ function logResearch(text) {
 // ------------------------------------------------------------------ 3. 讲解
 async function enterLesson(imgSrc) {
   const g = state.guide;
+  if (state.avatar instanceof AnamAvatar) sttStop(); // 拍照页的“一直在听”到此为止；讲解页由 Ava 自己听，待机时再换回我们的识别
+  state.halted = false; state.haltResume = null; state.lastLine = null;
+  renderHush();
   const img = $("#stage-img");
   await new Promise((res) => { img.onload = res; img.src = imgSrc; });
   fitStage();
@@ -644,6 +640,7 @@ async function backToCapture() {
   clearTimeout(session.timer);
   // 回到拍照页不马上连数字人：用户点一下 Ava 或开始下一次讲解时再连，不占会话时长
   if (state.avatar instanceof AnamAvatar) { await state.avatar.disconnect(); setBadge("💤"); }
+  startCaptureListener();
 }
 
 const steps = () => state.guide.steps;
@@ -973,6 +970,8 @@ function placePip(cx, cy) {
 // ---------- 说话 + 字幕 ----------
 async function speakLine(native, en, onFrac) {
   const gen = state.gen;
+  const line = (state.lastLine = { native, en, done: false });
+  if (state.halted) { state.halted = false; state.haltResume = null; renderHush(); } // Ava 又要说话了：不再是“停下”的状态
   state.mode = "speaking";
   $(".chips").classList.remove("waiting");
   $("#hint").textContent = "";
@@ -985,7 +984,7 @@ async function speakLine(native, en, onFrac) {
     setSubs(native, en, spoken);
     onFrac?.(Math.min(1, spoken / Math.max(1, native.length)));
   });
-  if (result === "done" || result === "timeout") setSubs(native, en, native.length);
+  if (result === "done" || result === "timeout") { setSubs(native, en, native.length); line.done = true; }
   return result;
 }
 
@@ -1004,7 +1003,8 @@ function setSubs(native, en, spoken) {
 let free = { text: "", gen: -1 };
 function onFreeSpeech(chunk, end) {
   clearTimeout(session.timer);
-  if (!lessonActive()) { if (end) armIdleCut(); return; } // 拍照页：问候语 / 闲聊说完后也待机
+  if (state.halted) return; // 用户让她停下了：被打断的那句话剩下的片段不管
+  if (!lessonActive()) { if (end) { if (state.lastLine) state.lastLine.done = true; armIdleCut(); } return; } // 拍照页：问候语 / 闲聊说完后也待机
   // 讲解词被打断后 Anam 会补发一个空的“说完了”事件：不是 Ava 的回答，别动字幕，也别取消待机
   if (!chunk && !free.text) { if (end && !player.playing) armIdleCut(); return; }
   clearTimeout(player.timer);
@@ -1192,6 +1192,7 @@ async function answerQuestion(question, heard) {
 
 // 打字输入（以及演示模式的语音识别）：常用指令本地识别，其余走 /api/ask
 const QUICK = {
+  pause: /^(停|暂停|等一下|等等|别说了|安静|stop|pause|wait|hold on|be quiet|para|espera|alto|silencio|dừng|chờ|im lặng|止めて|ストップ|待って|멈춰|잠깐|그만|arr[êe]te|attends?|توقف|انتظر|रुको|ठहरो|बस|pare|espere)/i,
   resume: /^(继续|接着|播放|continue|go on|resume|play|sigue|continúa|tiếp tục|続けて|계속|continue[zr]?|تابع|जारी|continua)/i,
   next: /下一步|下一个|好了|做好了|完成了|\bnext\b|\bdone\b|siguiente|tiếp|次へ|つぎ|次|다음|suivant|التالي|अगला|próximo/i,
   repeat: /再说|再讲|重复|没听清|再来一遍|\bagain\b|\brepeat\b|otra vez|repite|nói lại|もう一度|もういちど|다시|répète|encore|أعد|फिर से|repete|de novo/i,
@@ -1209,7 +1210,8 @@ function userSays(text, heard) {
 async function command(cmd, { fromTap = false } = {}) {
   if (!state.guide || blocked() || !cmd) return;
   state.avatar.interrupt();
-  if (cmd === "resume") return resume();
+  if (cmd === "pause") return hush(true);
+  if (cmd === "resume") return state.halted ? hush(false) : resume();
   if (cmd === "next") return goto(Math.min(state.step + 1, steps().length));
   if (cmd === "prev") return goto(Math.max(0, state.step - 1));
   if (cmd === "repeat") return goto(state.step);
@@ -1351,6 +1353,7 @@ class AnamAvatar {
     }
     this.connected = true;
     this.#connectedAt = Date.now();
+    if (phase === "greet" && state.cfg.stt) { try { c.muteInputAudio(); } catch {} }
     if (this.listening) this.onListenChange?.("on");
   }
 
@@ -1428,8 +1431,9 @@ class FallbackAvatar {
       // 服务器语音识别（自动识别语言）；自己出声的时候不收音
       this.#stt = await sttStart({
         gate: () => !this.#pending,
-        onHear: () => this.onListenChange?.("hear"),
-        onText: (t, heard) => { this.onListenChange?.("on"); if (t) { showHeard(t); this.onUserText?.(t, heard); } },
+        onHear: () => { this.onListenChange?.("hear"); showHeard("…", true); },
+        onPartial: (t) => showHeard(t, true),
+        onText: (t, heard) => { this.onListenChange?.("on"); heardSpeech(t, heard); },
       });
       if (this.#stt) { this.listening = true; return this.onListenChange?.("on"); }
     }
@@ -1440,7 +1444,7 @@ class FallbackAvatar {
     rec.continuous = true;
     rec.onresult = (e) => {
       const t = e.results[e.results.length - 1][0].transcript;
-      if (!this.#pending) { showHeard(t); this.onUserText?.(t); } // 自己说话时不收音
+      if (!this.#pending) heardSpeech(t); // 自己说话时不收音
     };
     rec.onstart = () => { this.listening = true; this.onListenChange?.("on"); };
     rec.onend = () => { this.listening = false; this.onListenChange?.("off"); setTimeout(() => { try { rec.start(); } catch {} }, 400); };

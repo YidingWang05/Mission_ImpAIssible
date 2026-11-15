@@ -449,7 +449,7 @@ app.post("/api/session-token", async (req, res) => {
     // quiet：待机后重新连上（或从讲解页返回），不再重复说一遍问候语
     personaConfig = quiet
       ? { ...base, systemPrompt: greetPrompt(lang), skipGreeting: true }
-      : { ...base, systemPrompt: greetPrompt(lang), initialMessage: lang.greeting, uninterruptibleGreeting: true };
+      : { ...base, systemPrompt: greetPrompt(lang), initialMessage: lang.greeting, uninterruptibleGreeting: false }; // 用户可以随时让她停下
   }
   try {
     // 这个 Anam 账户额度用完 / 密钥失效时，自动换 ANAM_API_KEY_2、_3 …
@@ -679,6 +679,8 @@ app.post("/api/stt", express.raw({ type: () => true, limit: "8mb" }), async (req
   const hint = STT_CODE[String(req.query.hint || "")];
   const clean = (t) => String(t || "").replace(/\([^)]*\)|\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim(); // 去掉 (笑声) 这类标注
   try {
+    // partial=1：用户还在说，只要一个尽快的中间结果给页面显示，不做第二次识别，也不判断语言
+    if (req.query.partial) return res.json({ text: clean((await transcribe(audio, type)).text), language: null });
     let out = await transcribe(audio, type);
     let language = STT_LANG[out.language_code] || null;
     const sure = language && (out.language_probability ?? 0) >= 0.6;

@@ -16,6 +16,8 @@
       <div class="voice-bars"><i></i><i></i><i></i><i></i><i></i></div>
     </div>
     <span class="avatar-badge" id="avatar-state"></span>
+    <!-- 随时让 Ava 停下 / 接着说 -->
+    <button type="button" class="hush" id="btn-hush">⏸</button>
   </div>
 
   <!-- 1. 欢迎 -->
@@ -51,7 +53,6 @@
         <span class="photo-cta"><span class="cam">📷</span><span data-t="takePhoto">拍面板照片</span></span>
       </label>
       <textarea id="question" class="text" rows="2" data-ph="questionPh"></textarea>
-      <button type="button" class="ghost ptt" data-ptt="question">🎤 <span data-t="talk">Hold to talk</span></button>
       <button id="btn-analyze" class="primary big" data-t="analyze" disabled>开始讲解</button>
       <button id="btn-sample" class="ghost" hidden>🍲 <span data-t="sampleMicrowave">Sample: microwave</span></button>
       <button id="btn-sample-danger" class="ghost" hidden>🔥 <span data-t="sampleBoiler">Sample: gas boiler</span></button>
@@ -115,7 +116,6 @@
         </div>
         <form id="ask-form" class="ask">
           <input id="ask" class="text" data-ph="askPh" autocomplete="off" />
-          <button type="button" class="icon ptt" data-ptt="ask" data-tt="talk">🎤</button>
           <button class="icon send" data-tt="send">➤</button>
         </form>
         <p class="muted small tap-tip" data-t="tapTip"></p>
