@@ -32,10 +32,13 @@ const GUIDE_DIR = path.join(here, "output", "guides");
 const MEDIA_DIR = path.join(here, "output", "media");
 await fs.mkdir(GUIDE_DIR, { recursive: true });
 await fs.mkdir(MEDIA_DIR, { recursive: true });
+const PHOTO_DIR = path.join(here, "output", "photos");
+await fs.mkdir(PHOTO_DIR, { recursive: true });
 
 const app = express();
 app.use(express.json({ limit: "15mb" }));
 app.use(express.static(path.join(here, "public")));
+app.use("/media", express.static(MEDIA_DIR));
 app.get("/vendor/anam.js", (_req, res) =>
   res.sendFile(path.join(here, "node_modules/@anam-ai/js-sdk/dist/umd/anam.js")),
 );
@@ -215,7 +218,7 @@ app.post("/api/analyze", async (req, res) => {
       ],
     });
     if (msg.stop_reason === "refusal" || !msg.parsed_output) throw new Error("这张照片无法分析，请换一张试试");
-    await finish(send, res, toGuideFile(msg.parsed_output, sources), lang);
+    await finish(send, res, toGuideFile(msg.parsed_output, sources), lang, image);
   } catch (e) {
     console.error("analyze", e);
     send({ type: "error", error: e?.message || "识别失败，请稍后再试" });
@@ -319,7 +322,7 @@ function toGuideFile(g, sources) {
 
 // 保存为 JSON 文件并把结果发给前端
 const guides = new Map(); // id → 步骤 JSON（讲解阶段的数字人会话从这里取，不信任前端传来的内容）
-async function finish(send, res, guide, lang) {
+async function finish(send, res, guide, lang, image) {
   const id = `${new Date().toISOString().replace(/[:.]/g, "-")}-${crypto.randomBytes(3).toString("hex")}`;
   const { demoImage, demo, ...content } = guide;
   const file = {
@@ -333,6 +336,8 @@ async function finish(send, res, guide, lang) {
   };
   await fs.writeFile(path.join(GUIDE_DIR, `${id}.json`), JSON.stringify(file, null, 2));
   guides.set(id, file);
+  // 照片只发给模型一次；这里存一份给视频工厂用（之后都靠 tutorial_id）
+  if (image) await fs.writeFile(path.join(PHOTO_DIR, `${id}.jpg`), Buffer.from(image, "base64")).catch(() => {});
   send({ type: "result", guideId: id, file: `/guides/${id}.json`, guide: { ...file, demoImage, demo } });
   res.end();
 }
@@ -431,18 +436,144 @@ app.post("/api/translate", async (req, res) => {
 
 // 步骤时间标记。C 的视频工厂写出 output/media/<id>.json（README 7.2 的清单）后直接用真实时间；
 // 在那之前按讲解词长度估算，播放器照样能画步骤标记、跳转、重播，不需要重新渲染。
-async function manifestOf(guide) {
-  try {
-    return JSON.parse(await fs.readFile(path.join(MEDIA_DIR, `${guide.id}.json`), "utf8"));
-  } catch {
-    return { tutorial_id: guide.id, status: "done", video_url: null, estimated: true, chapters: chapters(guide), clips: [] };
+// 视频工厂：后台跑 generate_action_videos.py（按 1→2→3 顺序，fal 结果全部缓存，已生成的步骤直接跳过）
+const RENDER_MODEL = process.env.RENDER_MODEL || "kling21";
+const RENDER_IDLE_MS = Number(process.env.RENDER_IDLE_MS) || 90_000; // 前端这么久没来轮询就停止生成
+const jobs = new Map(); // id → { proc, lastPoll, status, error }
+
+async function photoOf(id) {
+  for (const p of [path.join(PHOTO_DIR, `${id}.jpg`), DEMO_PHOTOS[id]].filter(Boolean)) {
+    try { await fs.access(p); return p; } catch {}
   }
+  return null;
 }
+// 仓库里那份微波炉说明配的照片
+const DEMO_PHOTOS = { "2026-11-14T21-37-34-994Z-536fda": path.join(here, "samples", "microwave.jpg") };
+
+async function startRender(guide) {
+  const id = guide.id;
+  const job = jobs.get(id);
+  if (job?.proc) { job.lastPoll = Date.now(); return job; }
+  const photo = await photoOf(id);
+  if (!photo || guide.safety === "blocked" || !guide.steps?.length) return null;
+  const out = path.join(MEDIA_DIR, id);
+  const prev = await scriptManifest(id);
+  if (prev && prev.steps.length >= guide.steps.length) { const j = { status: "done", lastPoll: Date.now() }; jobs.set(id, j); return j; }
+  const { spawn } = await import("node:child_process");
+  const proc = spawn(process.env.PYTHON || "python", ["generate_action_videos.py", "--guide", path.join(GUIDE_DIR, `${id}.json`), "--photo", photo, "--out", out, "--model", RENDER_MODEL],
+    { cwd: here, env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
+  const j = { proc, lastPoll: Date.now(), status: "rendering", error: null };
+  let tail = "";
+  proc.stdout.on("data", (d) => process.stdout.write(`[render ${id.slice(-6)}] ${d}`));
+  proc.stderr.on("data", (d) => { tail = (tail + d).slice(-2000); });
+  proc.on("exit", (code) => {
+    j.proc = null;
+    if (j.status === "stopped") return;
+    j.status = code === 0 ? "done" : "stopped";
+    if (code !== 0) {
+      j.error = /fal budget/.test(tail) ? "fal_budget" : /keys are unusable/.test(tail) ? "fal_keys" : "render_failed";
+      console.error(`render ${id} exit ${code}: ${tail.split("\n").filter(Boolean).slice(-2).join(" | ")}`);
+    }
+  });
+  jobs.set(id, j);
+  return j;
+}
+
+setInterval(() => {
+  for (const [id, j] of jobs) if (j.proc && Date.now() - j.lastPoll > RENDER_IDLE_MS) {
+    console.log(`render ${id}: no polling for ${RENDER_IDLE_MS / 1000}s, stopping`);
+    j.status = "stopped";
+    j.proc.kill();
+  }
+}, 10_000).unref();
+
+async function scriptManifest(id) {
+  try { return JSON.parse(await fs.readFile(path.join(MEDIA_DIR, id, "manifest.json"), "utf8")); } catch { return null; }
+}
+
+// 把脚本的 manifest.json 转成 README 7.2 的清单；没有视频时按讲解词长度估算时间（mode: "estimated"）
+async function manifestOf(guide) {
+  const m = await scriptManifest(guide.id);
+  const job = jobs.get(guide.id);
+  if (!m && !job) return { tutorial_id: guide.id, status: "done", video_url: null, estimated: true, chapters: chapters(guide), clips: [] };
+  const byStep = new Map((m?.steps || []).map((s) => [s.step, s]));
+  let at = 0;
+  const chs = [], clips = [];
+  const est = chapters(guide);
+  for (const s of guide.steps) {
+    const v = byStep.get(s.step);
+    if (v) {
+      chs.push({ step: s.step, start: +at.toFixed(2), end: +(at + v.duration_s).toFixed(2), ready: true });
+      clips.push({ step: s.step, url: `/media/${guide.id}/${v.file}`, duration: v.duration_s });
+      at += v.duration_s;
+    } else {
+      const e = est[s.step - 1];
+      chs.push({ step: s.step, ready: false, est_seconds: +(e.end - e.start).toFixed(1) });
+    }
+  }
+  const all = clips.length === guide.steps.length;
+  const status = all ? "done" : job?.status || "stopped";
+  return { tutorial_id: guide.id, status, video_url: all && m?.all_steps ? `/media/${guide.id}/${m.all_steps}` : null,
+    chapters: chs, clips, mode: "video", ...(job?.error ? { error: job.error } : {}) };
+}
+
+app.post("/api/render", async (req, res) => {
+  const guide = await loadGuide(req.body?.tutorial_id || req.body?.guideId);
+  if (!guide) return res.status(404).json({ error: "找不到这份步骤" });
+  await startRender(guide); // priority_steps 收下但不插队（视频按 1→2→3 顺序生成）
+  res.json(await manifestOf(guide));
+});
 
 app.get("/api/render/:id", async (req, res) => {
   const guide = await loadGuide(req.params.id);
   if (!guide) return res.status(404).json({ error: "找不到这份步骤" });
+  const j = jobs.get(guide.id);
+  if (j) j.lastPoll = Date.now();
   res.json(await manifestOf(guide));
+});
+
+// ElevenLabs 多语言旁白（Anam 不可用时讲解照样有声音；备用演示视频也用它）。
+// 同一句话只合成一次：output/media/tts/<sha1(voice+model+text)>.mp3
+const TTS_DIR = path.join(MEDIA_DIR, "tts");
+await fs.mkdir(TTS_DIR, { recursive: true });
+const TTS_VOICE = process.env.ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL" // premade "Sarah"（免费档不能用库里的声音）;
+const TTS_MODEL = process.env.ELEVENLABS_MODEL || "eleven_multilingual_v2";
+const ttsInflight = new Map();
+async function synth(text) {
+  const h = crypto.createHash("sha1").update(`${TTS_VOICE}|${TTS_MODEL}|${text}`).digest("hex").slice(0, 20);
+  const file = path.join(TTS_DIR, `${h}.mp3`);
+  try { await fs.access(file); return file; } catch {}
+  if (ttsInflight.has(h)) return ttsInflight.get(h);
+  const p = (async () => {
+    const r = await fetchWithKey("ELEVENLABS_API_KEY", (key) =>
+      fetch(`https://api.elevenlabs.io/v1/text-to-speech/${TTS_VOICE}?output_format=mp3_44100_128`, {
+        method: "POST",
+        headers: { "xi-api-key": key, "Content-Type": "application/json" },
+        body: JSON.stringify({ text, model_id: TTS_MODEL }),
+      }));
+    if (!r.ok) throw new Error(`elevenlabs ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    await fs.writeFile(file, Buffer.from(await r.arrayBuffer()));
+    return file;
+  })().finally(() => ttsInflight.delete(h));
+  ttsInflight.set(h, p);
+  return p;
+}
+const HAS_TTS = keysFor("ELEVENLABS_API_KEY").length > 0;
+async function sendTts(res, text) {
+  if (!text) return res.status(400).json({ error: "empty" });
+  if (!HAS_TTS) return res.status(503).json({ error: "no ElevenLabs key" });
+  try { res.type("audio/mpeg").sendFile(await synth(text.slice(0, 1500))); }
+  catch (e) { console.error("tts", e.message); res.status(502).json({ error: "tts failed" }); }
+}
+// 任意一句话（Ava 的回答、打招呼）
+app.get("/api/tts", (req, res) => sendTts(res, String(req.query.text || "").trim()));
+// 每一步旁白：缓存键 = 说明编号 + 步骤 + 语言（lang=en 用 narration_en，否则 narration_native）
+app.get("/api/narration/:id/:step", async (req, res) => {
+  const g = await loadGuide(req.params.id);
+  const s = g?.steps?.find((x) => x.step === Number(req.params.step));
+  if (!s) return res.status(404).json({ error: "not found" });
+  const en = req.query.lang === "en";
+  sendTts(res, en ? s.narration_en : s.narration_native);
 });
 
 // 问答：只收 tutorial_id，不收照片、不收完整说明
