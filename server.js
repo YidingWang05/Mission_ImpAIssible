@@ -181,6 +181,16 @@ app.post("/api/analyze", async (req, res) => {
       send({ type: "search", query: "AQUA AW-7G 取扱説明書 (demo)" });
       return await finish(send, res, { ...DEMO_GUIDE(lang.code), demo: true }, lang);
     }
+    // 预生成好的演示：微波炉（真实识别结果 + 已缓存的视频和旁白），台上直接读缓存，不再调用模型
+    if (sample === "microwave") {
+      const g = await loadGuide(DEMO_MICROWAVE);
+      if (!g) throw new Error("demo guide missing");
+      send({ type: "status", stage: "safety" });
+      send({ type: "status", stage: "research" });
+      for (const q of ["IKEA TILLREDA microwave manual", "TILLREDA 微波炉 使用说明"]) { send({ type: "search", tool: "web_search", query: q }); await new Promise((r) => setTimeout(r, 900)); }
+      send({ type: "result", guideId: g.id, file: `/guides/${g.id}.json`, guide: { ...g, demoImage: "/demo-microwave.jpg", demo: true } });
+      return res.end();
+    }
     if (!image) throw new Error("缺少照片");
     const imageBlock = { type: "image", source: { type: "base64", media_type: mediaType, data: image } };
 
@@ -448,7 +458,8 @@ async function photoOf(id) {
   return null;
 }
 // 仓库里那份微波炉说明配的照片
-const DEMO_PHOTOS = { "2026-11-14T21-37-34-994Z-536fda": path.join(here, "samples", "microwave.jpg") };
+const DEMO_MICROWAVE = process.env.DEMO_GUIDE_ID || "2026-11-15T01-20-02-074Z-75aecb";
+const DEMO_PHOTOS = { [DEMO_MICROWAVE]: path.join(here, "samples", "microwave.jpg") };
 
 async function startRender(guide) {
   const id = guide.id;

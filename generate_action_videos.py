@@ -23,7 +23,7 @@ Usage:
   # the run delivered in this session also used:  --trim 7=8.0
 """
 import argparse, hashlib, json, os, re, subprocess, sys
-from PIL import Image
+from PIL import Image, ImageOps
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fal_api as F
@@ -112,7 +112,7 @@ class Cache:
 
 
 def prep_frame(src, dst, long_side=1280):
-    im = Image.open(src).convert("RGB")
+    im = ImageOps.exif_transpose(Image.open(src)).convert("RGB")  # phone photos: honour EXIF rotation
     s = long_side / max(im.size)
     if s < 1:
         im = im.resize((round(im.width * s), round(im.height * s)), Image.LANCZOS)
@@ -169,7 +169,7 @@ def main():
     fdir = os.path.join(args.out, "_fal")
     cache = Cache(fdir)
     model = VIDEO_MODELS[args.model]
-    img_size = Image.open(args.photo).size
+    img_size = ImageOps.exif_transpose(Image.open(args.photo)).size
     only = {int(x) for x in args.only.split(",")} if args.only else None
 
     start = prep_frame(args.photo, os.path.join(fdir, "start_01.jpg"))
