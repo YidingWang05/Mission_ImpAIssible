@@ -1,0 +1,16 @@
+{
+ "4832294a489c0e58": {
+  "output": "{\"prompt\": \"Static locked-off camera. The white microwave keeps exactly its original look: opaque black glass door, closed, white control panel with two round knobs and a round button, no interior light. One hand from a person standing to the right enters the frame holding a clean white plate, slowly sets it on the speckled grey countertop right of the microwave, lets go, and leaves the frame. The plate stays still on the counter for the final second. The appliance, room and lighting do not change.\", \"duration\": 5, \"end_state\": \"The microwave is unchanged with its door closed and idle, and a white plate rests on the countertop beside it.\"}"
+ },
+ "d29133aaeaeddad2": {
+  "video": {
+   "url": "https://v3b.fal.media/files/b/0ab280cd/SpsCH3FZtgwiBxZgf5ztf_output.mp4",
+   "content_type": "video/mp4",
+   "file_name": "output.mp4",
+   "file_size": 14014728
+  }
+ },
+ "08f2a890ecfcb533": {
+  "output": "{\"prompt\": \"Static locked-off camera. The white microwave keeps exactly its original look: opaque black glass door that stays closed, white control panel with two round white knobs and a round button, unchanged. A single hand enters from the right side of the frame, picks up the white plate from the countertop with fingers under its rim, lifts it slowly out of the frame and leaves. The microwave stays closed and idle with no interior light and no door movement. The countertop beside it is empty. The final second is completely still.\", \"duration\": 5, \"end_state\": \"The microwave is unchanged, closed and idle, and the white plate has been removed from the countertop beside it.\"}"
+ }
+}

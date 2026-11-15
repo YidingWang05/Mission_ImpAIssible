@@ -1,0 +1,41 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-15T09-26-52-808Z-d5dd17",
+  "tutorial_id": "2026-11-15T09-26-52-808Z-d5dd17",
+  "generated_at": "2026-11-15T09:26:52.808Z",
+  "language": {
+    "code": "pt",
+    "name": "Portuguese (Brazil)"
+  },
+  "safety": "blocked",
+  "recognized": true,
+  "safety_kind": "gas",
+  "safety_message_native": "Esta é uma caldeira a gás; um erro pode causar vazamento de gás ou intoxicação por monóxido de carbono. Para a sua segurança, não posso orientar você nisso. Não tente fazer sozinho — entre em contato com a assistência oficial da Vexa ou com o seu senhorio. Se sentir cheiro de gás, abra as janelas, saia do cômodo e ligue para a linha de emergência de gás (no Reino Unido: 0800 111 999).",
+  "safety_message_en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999).",
+  "contact": {
+    "brand": "Vexa",
+    "advice_native": "Para a sua segurança, não posso orientar você nisso. Não tente fazer sozinho — entre em contato com a assistência oficial da Vexa ou com o seu senhorio. Se sentir cheiro de gás, abra as janelas, saia do cômodo e ligue para a linha de emergência de gás (no Reino Unido: 0800 111 999).",
+    "advice_en": "For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999)."
+  },
+  "appliance_native": "Caldeira a gás",
+  "appliance_en": "Gas boiler",
+  "brand": "Vexa (demo)",
+  "model": "unknown",
+  "model_confidence": "low",
+  "goal_native": "",
+  "goal_en": "",
+  "intro_native": "Esta é uma caldeira a gás; um erro pode causar vazamento de gás ou intoxicação por monóxido de carbono. Para a sua segurança, não posso orientar você nisso. Não tente fazer sozinho — entre em contato com a assistência oficial da Vexa ou com o seu senhorio. Se sentir cheiro de gás, abra as janelas, saia do cômodo e ligue para a linha de emergência de gás (no Reino Unido: 0800 111 999).",
+  "intro_en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999).",
+  "buttons": [],
+  "steps": [],
+  "tips": [],
+  "warnings": [
+    {
+      "native": "Esta é uma caldeira a gás; um erro pode causar vazamento de gás ou intoxicação por monóxido de carbono. Para a sua segurança, não posso orientar você nisso. Não tente fazer sozinho — entre em contato com a assistência oficial da Vexa ou com o seu senhorio. Se sentir cheiro de gás, abra as janelas, saia do cômodo e ligue para a linha de emergência de gás (no Reino Unido: 0800 111 999).",
+      "en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999)."
+    }
+  ],
+  "sources": [],
+  "closing_native": "",
+  "closing_en": ""
+}

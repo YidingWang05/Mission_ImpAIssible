@@ -1,0 +1,290 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-14T23-55-18-013Z-419755",
+  "tutorial_id": "2026-11-14T23-55-18-013Z-419755",
+  "generated_at": "2026-11-14T23:55:18.013Z",
+  "language": {
+    "code": "zh",
+    "name": "Chinese (Mandarin)"
+  },
+  "safety": "ok",
+  "recognized": true,
+  "appliance_native": "微波炉（机械旋钮式）",
+  "appliance_en": "Microwave oven (mechanical dial controls)",
+  "brand": "IKEA",
+  "model": "TILLREDA 提瑞达 微波炉，白色，20 升，700 瓦",
+  "model_confidence": "medium",
+  "goal_native": "用微波炉加热食物",
+  "goal_en": "Reheat food in the microwave",
+  "intro_native": "这是宜家的提瑞达微波炉，白色机身，黑色玻璃门。今天我们一起学最常用的功能：加热食物。",
+  "intro_en": "This is an IKEA TILLREDA microwave with a white body and a black glass door. Today we'll learn the most common task: reheating food.",
+  "buttons": [
+    {
+      "id": "b1",
+      "panel_text": "Min · ❄ · Med · Max",
+      "name_native": "火力旋钮",
+      "name_en": "Power dial",
+      "function_native": "选择火力大小，从最小到最大共五档，雪花图标是解冻。",
+      "function_en": "Sets the power level, five levels from Min to Max; the snowflake icon is defrost.",
+      "box": {
+        "x": 606,
+        "y": 203,
+        "w": 64,
+        "h": 74
+      }
+    },
+    {
+      "id": "b2",
+      "panel_text": "⏲ 0 1 2 3 4 5 … 20 30",
+      "name_native": "定时旋钮",
+      "name_en": "Timer dial",
+      "function_native": "设定加热时间，0 到 30 分钟。转动后微波炉就开始工作，转回 0 就停止。",
+      "function_en": "Sets the cooking time from 0 to 30 minutes. Turning it starts the oven; turning it back to 0 stops it.",
+      "box": {
+        "x": 726,
+        "y": 216,
+        "w": 76,
+        "h": 74
+      }
+    },
+    {
+      "id": "b3",
+      "panel_text": "圆形按钮（无文字）",
+      "name_native": "开门按钮",
+      "name_en": "Door release button",
+      "function_native": "按一下打开炉门。",
+      "function_en": "Press to open the door.",
+      "box": {
+        "x": 852,
+        "y": 226,
+        "w": 52,
+        "h": 64
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "button_id": "b3",
+      "action_native": "按开门按钮",
+      "action_en": "Press the door button",
+      "narration_native": "先打开炉门。在门右边的白色面板上，最下面有一个圆形的大按钮，按一下，门就打开了。",
+      "narration_en": "First, open the door. On the white panel to the right of the door, the big round button at the bottom opens it. Just press it once.",
+      "sources": [
+        "https://www.ikea.cn/cn/zh/manuals/tillreda-ti-rui-da-wei-bo-lu-bai-se__AA-2226285-1-1.pdf"
+      ]
+    },
+    {
+      "step": 2,
+      "button_id": null,
+      "action_native": "放入食物并关好门",
+      "action_en": "Put the food in and close the door",
+      "narration_native": "把食物放进可以微波的碗或盘子里，放在玻璃转盘中间。不要用金属的东西。然后把门用力关紧，门没关好微波炉不会加热。",
+      "narration_en": "Put the food in a microwave-safe bowl or plate, in the middle of the glass turntable. Don't use anything metal. Then close the door firmly; the oven won't heat if it isn't fully shut.",
+      "sources": [
+        "https://www.ikea.cn/cn/zh/manuals/tillreda-ti-rui-da-wei-bo-lu-bai-se__AA-2226285-1-1.pdf"
+      ]
+    },
+    {
+      "step": 3,
+      "button_id": "b1",
+      "action_native": "把火力旋钮转到 Max",
+      "action_en": "Turn the power dial to Max",
+      "narration_native": "现在看面板最上面的白色旋钮，这是火力旋钮。加热饭菜一般用最大火，把它转到写着 Max 的位置。",
+      "narration_en": "Now look at the white dial at the top of the panel. This is the power dial. For reheating, use full power: turn it to Max.",
+      "sources": [
+        "https://www.ikea.cn/cn/zh/manuals/tillreda-ti-rui-da-wei-bo-lu-bai-se__AA-2226285-1-1.pdf",
+        "https://www.ikea.com/ca/en/p/tillreda-microwave-oven-white-80511549/"
+      ]
+    },
+    {
+      "step": 4,
+      "button_id": "b2",
+      "action_native": "转动定时旋钮设定时间",
+      "action_en": "Turn the timer dial to set the time",
+      "narration_native": "中间那个旋钮是定时旋钮，上面的数字是分钟。转到你想要的时间，比如 2 分钟。一转好，微波炉就开始工作了，不需要再按开始。",
+      "narration_en": "The middle dial is the timer. The numbers are minutes. Turn it to the time you want, for example 2 minutes. As soon as you set it, the oven starts. There's no start button.",
+      "sources": [
+        "https://www.ikea.cn/cn/zh/manuals/tillreda-ti-rui-da-wei-bo-lu-bai-se__AA-2226285-1-1.pdf",
+        "https://www.ikea.com/ca/en/p/tillreda-microwave-oven-white-80511549/"
+      ]
+    },
+    {
+      "step": 5,
+      "button_id": null,
+      "action_native": "等待“叮”的一声",
+      "action_en": "Wait for the ding",
+      "narration_native": "时间到了，微波炉会发出“叮”的一声，然后自己停下来。加热时有点蒸汽或者热风都是正常的。",
+      "narration_en": "When the time is up, the oven makes a ding sound and stops by itself. A little steam or warm air during heating is normal.",
+      "sources": [
+        "https://www.ikea.cn/cn/zh/manuals/tillreda-ti-rui-da-wei-bo-lu-bai-se__AA-2226285-1-1.pdf"
+      ]
+    },
+    {
+      "step": 6,
+      "button_id": "b3",
+      "action_native": "按开门按钮取出食物",
+      "action_en": "Press the door button and take out the food",
+      "narration_native": "再按一下最下面的圆形按钮，把门打开。小心，碗可能很烫，最好用隔热手套。",
+      "narration_en": "Press the round button at the bottom again to open the door. Careful, the bowl may be hot. Use an oven mitt if you can.",
+      "sources": [
+        "https://www.ikea.cn/cn/zh/manuals/tillreda-ti-rui-da-wei-bo-lu-bai-se__AA-2226285-1-1.pdf"
+      ]
+    },
+    {
+      "step": 7,
+      "button_id": "b2",
+      "action_native": "提前停止时把定时旋钮转回 0",
+      "action_en": "If you stop early, turn the timer back to 0",
+      "narration_native": "如果你提前开门拿出食物，一定要把中间的定时旋钮转回 0。不然空着的微波炉可能继续运行，会损坏机器。",
+      "narration_en": "If you open the door early and take the food out, always turn the middle timer dial back to 0. Otherwise the empty oven could run again and get damaged.",
+      "sources": [
+        "https://www.ikea.cn/cn/zh/manuals/tillreda-ti-rui-da-wei-bo-lu-bai-se__AA-2226285-1-1.pdf"
+      ]
+    }
+  ],
+  "tips": [
+    {
+      "native": "解冻时，把火力旋钮转到雪花图标，再设定时间，中途把食物翻一翻。",
+      "en": "To defrost, turn the power dial to the snowflake icon, then set the time. Turn the food over partway through."
+    },
+    {
+      "native": "定时旋钮以分钟为单位。不到一分钟的话，可以用手机计时，到时间自己把旋钮转回 0。",
+      "en": "The timer is marked in minutes. For less than a minute, time it with your phone and turn the dial back to 0 yourself."
+    },
+    {
+      "native": "设定很短的时间时，可以先转过 2 分钟，再转回你想要的时间，这样会更准一点。",
+      "en": "For very short times, turn the dial past 2 minutes first, then back to the time you want. It's often more accurate."
+    },
+    {
+      "native": "爆米花只用最大火 Max，低档火力会时开时停。",
+      "en": "Use only Max for popcorn; lower settings switch the power on and off."
+    },
+    {
+      "native": "去除异味：碗里放 300 毫升水和半个柠檬，用最大火加热 10 分钟，再把里面擦干。",
+      "en": "To remove smells: heat half a lemon in a bowl with 300 ml of water on full power for 10 minutes, then wipe the inside dry."
+    },
+    {
+      "native": "如果微波炉不工作，先检查插头有没有插紧，再检查电闸。",
+      "en": "If it won't start, check that the plug is fully in, then check the fuse or breaker."
+    }
+  ],
+  "warnings": [
+    {
+      "native": "不要空着运行微波炉，这非常危险。",
+      "en": "Never run the microwave empty. It is very dangerous."
+    },
+    {
+      "native": "不要放金属容器、带金边的碗、锡纸或金属扎带，会打火引起火灾。",
+      "en": "No metal containers, metal-trimmed dishes, foil or metal twist ties. They can spark and start a fire."
+    },
+    {
+      "native": "不要加热带壳的鸡蛋或整个煮鸡蛋，可能会爆炸。",
+      "en": "Don't heat eggs in their shells or whole boiled eggs. They can explode."
+    },
+    {
+      "native": "热水或热饮拿出来时可能突然沸腾溢出，要小心端。婴儿食品要搅匀并试温度。",
+      "en": "Hot drinks can suddenly boil over when moved. Handle carefully. Stir baby food and check the temperature."
+    },
+    {
+      "native": "如果看到冒烟，马上关掉或拔掉电源，并保持门关着，让火自己熄灭。",
+      "en": "If you see smoke, switch off or unplug the oven and keep the door closed to smother flames."
+    },
+    {
+      "native": "清洁前先拔插头，用湿布擦。不要用钢丝球刮玻璃门。",
+      "en": "Unplug before cleaning and use a damp cloth. Don't scrape the glass door with metal scrubbers."
+    },
+    {
+      "native": "如果微波炉坏了，不要自己拆开外壳修理。请联系宜家官方客服或你的房东。",
+      "en": "If the microwave breaks, don't open the casing to repair it. Contact IKEA's official support or your landlord."
+    }
+  ],
+  "closing_native": "做得好！记住：上面的旋钮选火力，中间的旋钮定时间，下面的按钮开门。祝你用餐愉快！",
+  "closing_en": "Well done! Remember: the top dial sets the power, the middle dial sets the time, and the bottom button opens the door. Enjoy your meal!",
+  "sources": [
+    {
+      "id": 1,
+      "title": "IKEA TILLREDA 504.867.92 MANUAL Pdf Download",
+      "url": "https://www.manualslib.com/manual/1891328/Ikea-Tillreda-504-867-92.html",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 2,
+      "title": "Ikea TILLREDA 504.867.92 Manuals",
+      "url": "https://www.manualslib.com/products/Ikea-Tillreda-504-867-92-11117496.html",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 3,
+      "title": "IKEA TILLREDA Portable Induction Hob User Manual",
+      "url": "https://manuals.plus/m/7d8d8026d63dd0523a48cf7acfaa373342efce64dbf5d79786c7a8af60a66c77",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 4,
+      "title": "IKEA TILLREDA Microwave Oven - User Manual and Specifications",
+      "url": "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 5,
+      "title": "IKEA TILLREDA 304.931.09 Microwave Oven User Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 6,
+      "title": "IKEA TILLREDA Microwave Oven User Manual",
+      "url": "https://device.report/manual/2975069",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 7,
+      "title": "TILLREDA Microwave Oven User Manual",
+      "url": "https://manuals.plus/m/1d336a5ac54101e2bdda44b44bbf998d2dd8f7423406cb5b1c8d7449670f2f0b",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 8,
+      "title": "Manuals+ Home › Ikea › IKEA TILLREDA User Manual IKEA TILLREDA User Manual",
+      "url": "https://manuals.plus/ikea/ikea-tillreda-manual.pdf",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 9,
+      "title": "IKEA TILLREDA User Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/ikea-tillreda-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 10,
+      "title": "TILLREDA CN GB",
+      "url": "https://www.ikea.cn/cn/zh/manuals/tillreda-ti-rui-da-wei-bo-lu-bai-se__AA-2226285-1-1.pdf",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 11,
+      "title": "TILLREDA microwave oven, white - IKEA CA",
+      "url": "https://www.ikea.com/ca/en/p/tillreda-microwave-oven-white-80511549/",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 12,
+      "title": "IKEA Klippan",
+      "url": "https://en.wikipedia.org/wiki/IKEA_Klippan",
+      "kind": "web",
+      "cited": false
+    }
+  ]
+}

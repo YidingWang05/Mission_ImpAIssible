@@ -1,0 +1,41 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-15T09-26-56-135Z-466621",
+  "tutorial_id": "2026-11-15T09-26-56-135Z-466621",
+  "generated_at": "2026-11-15T09:26:56.135Z",
+  "language": {
+    "code": "ko",
+    "name": "Korean"
+  },
+  "safety": "blocked",
+  "recognized": true,
+  "safety_kind": "gas",
+  "safety_message_native": "이것은 가스보일러입니다. 잘못 조작하면 가스 누출이나 일산화탄소 중독이 일어날 수 있습니다. 안전을 위해 이 작업은 안내해 드릴 수 없습니다. 직접 하지 마시고 Vexa 공식 고객센터 또는 집주인에게 연락하세요. 가스 냄새가 나면 창문을 열고 방에서 나와 가스 긴급 전화(영국: 0800 111 999)로 연락하세요.",
+  "safety_message_en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999).",
+  "contact": {
+    "brand": "Vexa",
+    "advice_native": "안전을 위해 이 작업은 안내해 드릴 수 없습니다. 직접 하지 마시고 Vexa 공식 고객센터 또는 집주인에게 연락하세요. 가스 냄새가 나면 창문을 열고 방에서 나와 가스 긴급 전화(영국: 0800 111 999)로 연락하세요.",
+    "advice_en": "For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999)."
+  },
+  "appliance_native": "가스보일러",
+  "appliance_en": "Gas boiler",
+  "brand": "Vexa (demo)",
+  "model": "unknown",
+  "model_confidence": "low",
+  "goal_native": "",
+  "goal_en": "",
+  "intro_native": "이것은 가스보일러입니다. 잘못 조작하면 가스 누출이나 일산화탄소 중독이 일어날 수 있습니다. 안전을 위해 이 작업은 안내해 드릴 수 없습니다. 직접 하지 마시고 Vexa 공식 고객센터 또는 집주인에게 연락하세요. 가스 냄새가 나면 창문을 열고 방에서 나와 가스 긴급 전화(영국: 0800 111 999)로 연락하세요.",
+  "intro_en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999).",
+  "buttons": [],
+  "steps": [],
+  "tips": [],
+  "warnings": [
+    {
+      "native": "이것은 가스보일러입니다. 잘못 조작하면 가스 누출이나 일산화탄소 중독이 일어날 수 있습니다. 안전을 위해 이 작업은 안내해 드릴 수 없습니다. 직접 하지 마시고 Vexa 공식 고객센터 또는 집주인에게 연락하세요. 가스 냄새가 나면 창문을 열고 방에서 나와 가스 긴급 전화(영국: 0800 111 999)로 연락하세요.",
+      "en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999)."
+    }
+  ],
+  "sources": [],
+  "closing_native": "",
+  "closing_en": ""
+}

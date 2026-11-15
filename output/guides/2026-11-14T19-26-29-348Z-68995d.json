@@ -1,0 +1,174 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-14T19-26-29-348Z-68995d",
+  "tutorial_id": "2026-11-14T19-26-29-348Z-68995d",
+  "generated_at": "2026-11-14T19:26:29.348Z",
+  "language": {
+    "code": "en",
+    "name": "English"
+  },
+  "safety": "ok",
+  "recognized": true,
+  "appliance_native": "Washing machine",
+  "appliance_en": "Washing machine",
+  "brand": "AQUA (demo)",
+  "model": "AW-7G (demo)",
+  "model_confidence": "high",
+  "goal_native": "Run a quick wash (お急ぎ mode)",
+  "goal_en": "Run a quick wash (お急ぎ mode)",
+  "intro_native": "This is a Japanese washing machine, so the panel is all in Japanese. Don't worry — we'll run a quick wash together in four steps.",
+  "intro_en": "This is a Japanese washing machine, so the panel is all in Japanese. Don't worry — we'll run a quick wash together in four steps.",
+  "buttons": [
+    {
+      "id": "power",
+      "panel_text": "電源",
+      "name_native": "Power button",
+      "name_en": "Power button",
+      "function_native": "Turns the washer on or off.",
+      "function_en": "Turns the washer on or off.",
+      "box": {
+        "x": 48,
+        "y": 430,
+        "w": 84,
+        "h": 140
+      }
+    },
+    {
+      "id": "dial",
+      "panel_text": "コース",
+      "name_native": "Program dial",
+      "name_en": "Program dial",
+      "function_native": "Turn it to choose a program: normal, quick, blanket, drum clean, delicates, rinse, spin only.",
+      "function_en": "Turn it to choose a program: normal, quick, blanket, drum clean, delicates, rinse, spin only.",
+      "box": {
+        "x": 495,
+        "y": 333,
+        "w": 190,
+        "h": 317
+      }
+    },
+    {
+      "id": "temp",
+      "panel_text": "温度",
+      "name_native": "Temperature button",
+      "name_en": "Temperature button",
+      "function_native": "Chooses the water temperature; each press moves one level.",
+      "function_en": "Chooses the water temperature; each press moves one level.",
+      "box": {
+        "x": 770,
+        "y": 292,
+        "w": 90,
+        "h": 93
+      }
+    },
+    {
+      "id": "spin",
+      "panel_text": "脱水",
+      "name_native": "Spin button",
+      "name_en": "Spin button",
+      "function_native": "Sets spin strength and time; each press moves one level.",
+      "function_en": "Sets spin strength and time; each press moves one level.",
+      "box": {
+        "x": 875,
+        "y": 292,
+        "w": 90,
+        "h": 93
+      }
+    },
+    {
+      "id": "timer",
+      "panel_text": "予約",
+      "name_native": "Delay timer button",
+      "name_en": "Delay timer button",
+      "function_native": "Starts the wash automatically after a few hours.",
+      "function_en": "Starts the wash automatically after a few hours.",
+      "box": {
+        "x": 770,
+        "y": 417,
+        "w": 90,
+        "h": 93
+      }
+    },
+    {
+      "id": "lock",
+      "panel_text": "ロック",
+      "name_native": "Child lock button",
+      "name_en": "Child lock button",
+      "function_native": "Locks the panel. Hold for three seconds to turn on or off.",
+      "function_en": "Locks the panel. Hold for three seconds to turn on or off.",
+      "box": {
+        "x": 875,
+        "y": 417,
+        "w": 90,
+        "h": 93
+      }
+    },
+    {
+      "id": "start",
+      "panel_text": "スタート / 一時停止",
+      "name_native": "Start / Pause button",
+      "name_en": "Start / Pause button",
+      "function_native": "Starts the wash; press again during a wash to pause.",
+      "function_en": "Starts the wash; press again during a wash to pause.",
+      "box": {
+        "x": 770,
+        "y": 567,
+        "w": 195,
+        "h": 167
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "button_id": "power",
+      "action_native": "Press the power button",
+      "action_en": "Press the power button",
+      "narration_native": "First, turn it on. On the far left there's a round button with a red power symbol, labelled 電源. Press it once and the display lights up.",
+      "narration_en": "First, turn it on. On the far left there's a round button with a red power symbol, labelled 電源. Press it once and the display lights up.",
+      "sources": []
+    },
+    {
+      "step": 2,
+      "button_id": "dial",
+      "action_native": "Turn the dial to お急ぎ",
+      "action_en": "Turn the dial to お急ぎ",
+      "narration_native": "Next, choose the program. Turn the big round dial in the middle so the blue line points to お急ぎ at the upper right — that's quick wash.",
+      "narration_en": "Next, choose the program. Turn the big round dial in the middle so the blue line points to お急ぎ at the upper right — that's quick wash.",
+      "sources": []
+    },
+    {
+      "step": 3,
+      "button_id": "spin",
+      "action_native": "Press 脱水 to set the spin",
+      "action_en": "Press 脱水 to set the spin",
+      "narration_native": "If your clothes are heavy, press the white 脱水 button at the top right a few times for a stronger spin. For light clothes you can skip this.",
+      "narration_en": "If your clothes are heavy, press the white 脱水 button at the top right a few times for a stronger spin. For light clothes you can skip this.",
+      "sources": []
+    },
+    {
+      "step": 4,
+      "button_id": "start",
+      "action_native": "Press the blue start button",
+      "action_en": "Press the blue start button",
+      "narration_native": "Finally, press the big blue button at the bottom right labelled スタート. You'll hear a beep and the wash begins.",
+      "narration_en": "Finally, press the big blue button at the bottom right labelled スタート. You'll hear a beep and the wash begins.",
+      "sources": []
+    }
+  ],
+  "tips": [
+    {
+      "native": "Quick wash saves time for small loads; use a stronger spin for heavy clothes.",
+      "en": "Quick wash saves time for small loads; use a stronger spin for heavy clothes."
+    }
+  ],
+  "warnings": [
+    {
+      "native": "Don't open the lid or reach inside while the drum is moving.",
+      "en": "Don't open the lid or reach inside while the drum is moving."
+    }
+  ],
+  "sources": [],
+  "closing_native": "That's it — the machine is running and will finish in about 38 minutes. Ask me anything!",
+  "closing_en": "That's it — the machine is running and will finish in about 38 minutes. Ask me anything!"
+}

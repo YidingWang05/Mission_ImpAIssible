@@ -1,0 +1,41 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-15T09-26-58-612Z-88e0b4",
+  "tutorial_id": "2026-11-15T09-26-58-612Z-88e0b4",
+  "generated_at": "2026-11-15T09:26:58.612Z",
+  "language": {
+    "code": "fr",
+    "name": "French"
+  },
+  "safety": "blocked",
+  "recognized": true,
+  "safety_kind": "gas",
+  "safety_message_native": "C'est une chaudière à gaz ; une erreur peut provoquer une fuite de gaz ou une intoxication au monoxyde de carbone. Pour votre sécurité, je ne peux pas vous guider pour cela. N'essayez pas vous-même : contactez le service après-vente officiel de Vexa ou votre propriétaire. Si vous sentez une odeur de gaz, ouvrez les fenêtres, quittez la pièce et appelez le numéro d'urgence gaz (au Royaume-Uni : 0800 111 999).",
+  "safety_message_en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999).",
+  "contact": {
+    "brand": "Vexa",
+    "advice_native": "Pour votre sécurité, je ne peux pas vous guider pour cela. N'essayez pas vous-même : contactez le service après-vente officiel de Vexa ou votre propriétaire. Si vous sentez une odeur de gaz, ouvrez les fenêtres, quittez la pièce et appelez le numéro d'urgence gaz (au Royaume-Uni : 0800 111 999).",
+    "advice_en": "For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999)."
+  },
+  "appliance_native": "Chaudière à gaz",
+  "appliance_en": "Gas boiler",
+  "brand": "Vexa (demo)",
+  "model": "unknown",
+  "model_confidence": "low",
+  "goal_native": "",
+  "goal_en": "",
+  "intro_native": "C'est une chaudière à gaz ; une erreur peut provoquer une fuite de gaz ou une intoxication au monoxyde de carbone. Pour votre sécurité, je ne peux pas vous guider pour cela. N'essayez pas vous-même : contactez le service après-vente officiel de Vexa ou votre propriétaire. Si vous sentez une odeur de gaz, ouvrez les fenêtres, quittez la pièce et appelez le numéro d'urgence gaz (au Royaume-Uni : 0800 111 999).",
+  "intro_en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999).",
+  "buttons": [],
+  "steps": [],
+  "tips": [],
+  "warnings": [
+    {
+      "native": "C'est une chaudière à gaz ; une erreur peut provoquer une fuite de gaz ou une intoxication au monoxyde de carbone. Pour votre sécurité, je ne peux pas vous guider pour cela. N'essayez pas vous-même : contactez le service après-vente officiel de Vexa ou votre propriétaire. Si vous sentez une odeur de gaz, ouvrez les fenêtres, quittez la pièce et appelez le numéro d'urgence gaz (au Royaume-Uni : 0800 111 999).",
+      "en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999)."
+    }
+  ],
+  "sources": [],
+  "closing_native": "",
+  "closing_en": ""
+}

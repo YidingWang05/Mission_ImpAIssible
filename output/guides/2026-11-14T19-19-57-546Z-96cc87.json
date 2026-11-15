@@ -1,0 +1,174 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-14T19-19-57-546Z-96cc87",
+  "tutorial_id": "2026-11-14T19-19-57-546Z-96cc87",
+  "generated_at": "2026-11-14T19:19:57.546Z",
+  "language": {
+    "code": "zh",
+    "name": "Chinese (Mandarin)"
+  },
+  "safety": "ok",
+  "recognized": true,
+  "appliance_native": "全自动洗衣机",
+  "appliance_en": "Washing machine",
+  "brand": "AQUA (demo)",
+  "model": "AW-7G (demo)",
+  "model_confidence": "high",
+  "goal_native": "快速洗一次衣服（お急ぎ 快洗模式）",
+  "goal_en": "Run a quick wash (お急ぎ mode)",
+  "intro_native": "这是一台日本的全自动洗衣机，面板上都是日文。别担心，我们一起用快洗模式洗一次衣服，一共四步。",
+  "intro_en": "This is a Japanese washing machine, so the panel is all in Japanese. Don't worry — we'll run a quick wash together in four steps.",
+  "buttons": [
+    {
+      "id": "power",
+      "panel_text": "電源",
+      "name_native": "电源键",
+      "name_en": "Power button",
+      "function_native": "打开或关闭洗衣机。按一下开机，再按一下关机。",
+      "function_en": "Turns the washer on or off.",
+      "box": {
+        "x": 48,
+        "y": 430,
+        "w": 84,
+        "h": 140
+      }
+    },
+    {
+      "id": "dial",
+      "panel_text": "コース",
+      "name_native": "洗衣程序旋钮",
+      "name_en": "Program dial",
+      "function_native": "转动选择洗衣程序：标准、快洗、毛毯、洗槽清洁、轻柔洗、漂洗、单脱水。",
+      "function_en": "Turn it to choose a program: normal, quick, blanket, drum clean, delicates, rinse, spin only.",
+      "box": {
+        "x": 495,
+        "y": 333,
+        "w": 190,
+        "h": 317
+      }
+    },
+    {
+      "id": "temp",
+      "panel_text": "温度",
+      "name_native": "水温键",
+      "name_en": "Temperature button",
+      "function_native": "选择洗涤水温，按一次换一档。",
+      "function_en": "Chooses the water temperature; each press moves one level.",
+      "box": {
+        "x": 770,
+        "y": 292,
+        "w": 90,
+        "h": 93
+      }
+    },
+    {
+      "id": "spin",
+      "panel_text": "脱水",
+      "name_native": "脱水键",
+      "name_en": "Spin button",
+      "function_native": "调整脱水的强度和时间，按一次换一档。",
+      "function_en": "Sets spin strength and time; each press moves one level.",
+      "box": {
+        "x": 875,
+        "y": 292,
+        "w": 90,
+        "h": 93
+      }
+    },
+    {
+      "id": "timer",
+      "panel_text": "予約",
+      "name_native": "预约键",
+      "name_en": "Delay timer button",
+      "function_native": "设置几个小时后自动开始洗衣。",
+      "function_en": "Starts the wash automatically after a few hours.",
+      "box": {
+        "x": 770,
+        "y": 417,
+        "w": 90,
+        "h": 93
+      }
+    },
+    {
+      "id": "lock",
+      "panel_text": "ロック",
+      "name_native": "童锁键",
+      "name_en": "Child lock button",
+      "function_native": "锁住面板，防止小孩误操作。长按三秒开启或解除。",
+      "function_en": "Locks the panel. Hold for three seconds to turn on or off.",
+      "box": {
+        "x": 875,
+        "y": 417,
+        "w": 90,
+        "h": 93
+      }
+    },
+    {
+      "id": "start",
+      "panel_text": "スタート / 一時停止",
+      "name_native": "启动 / 暂停键",
+      "name_en": "Start / Pause button",
+      "function_native": "开始洗衣；洗的过程中再按一下就是暂停。",
+      "function_en": "Starts the wash; press again during a wash to pause.",
+      "box": {
+        "x": 770,
+        "y": 567,
+        "w": 195,
+        "h": 167
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "button_id": "power",
+      "action_native": "按一下电源键",
+      "action_en": "Press the power button",
+      "narration_native": "先开机。看面板最左边，有一个圆形按钮，上面有红色的开机图标，下面写着日文「電源」。按一下它，屏幕会亮起来。",
+      "narration_en": "First, turn it on. On the far left there's a round button with a red power symbol, labelled 電源. Press it once and the display lights up.",
+      "sources": []
+    },
+    {
+      "step": 2,
+      "button_id": "dial",
+      "action_native": "把旋钮转到「お急ぎ」",
+      "action_en": "Turn the dial to お急ぎ",
+      "narration_native": "接下来选洗衣程序。中间那个大圆旋钮，把蓝色的指示线转到右上方写着「お急ぎ」的位置，这就是快洗模式。",
+      "narration_en": "Next, choose the program. Turn the big round dial in the middle so the blue line points to お急ぎ at the upper right — that's quick wash.",
+      "sources": []
+    },
+    {
+      "step": 3,
+      "button_id": "spin",
+      "action_native": "按「脱水」调脱水强度",
+      "action_en": "Press 脱水 to set the spin",
+      "narration_native": "如果衣服比较厚，可以按右上角写着「脱水」的白色按钮，多按几次可以加强脱水。衣服薄的话这一步可以跳过。",
+      "narration_en": "If your clothes are heavy, press the white 脱水 button at the top right a few times for a stronger spin. For light clothes you can skip this.",
+      "sources": []
+    },
+    {
+      "step": 4,
+      "button_id": "start",
+      "action_native": "按蓝色的启动键",
+      "action_en": "Press the blue start button",
+      "narration_native": "最后，按右下角那个最大的蓝色按钮，上面写着「スタート」，就是启动。听到「哔」一声，洗衣机就开始工作了。",
+      "narration_en": "Finally, press the big blue button at the bottom right labelled スタート. You'll hear a beep and the wash begins.",
+      "sources": []
+    }
+  ],
+  "tips": [
+    {
+      "native": "衣服不多时用快洗最省时间；厚衣服记得加强脱水。",
+      "en": "Quick wash saves time for small loads; use a stronger spin for heavy clothes."
+    }
+  ],
+  "warnings": [
+    {
+      "native": "洗衣机运转时不要打开盖子，也不要把手伸进去。",
+      "en": "Don't open the lid or reach inside while the drum is moving."
+    }
+  ],
+  "sources": [],
+  "closing_native": "好啦，洗衣机已经开始工作了，大约 38 分钟后就洗好。有问题随时问我！",
+  "closing_en": "That's it — the machine is running and will finish in about 38 minutes. Ask me anything!"
+}

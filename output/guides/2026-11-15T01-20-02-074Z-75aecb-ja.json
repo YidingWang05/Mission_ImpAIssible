@@ -1,0 +1,273 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-15T01-20-02-074Z-75aecb-ja",
+  "tutorial_id": "2026-11-15T01-20-02-074Z-75aecb-ja",
+  "generated_at": "2026-11-15T09:26:51.979Z",
+  "language": {
+    "code": "ja",
+    "name": "Japanese"
+  },
+  "safety": "ok",
+  "recognized": true,
+  "appliance_native": "電子レンジ",
+  "appliance_en": "Microwave oven",
+  "brand": "IKEA",
+  "model": "TILLREDA (likely article 304.931.09, 20 L, 700 W)",
+  "model_confidence": "medium",
+  "goal_native": "電子レンジで食べ物を温める",
+  "goal_en": "Reheat food in the microwave",
+  "intro_native": "これは白いIKEA TILLREDAの電子レンジです。つまみが2つと丸いボタンが1つだけなので、とてもかんたんです。食べ物の温め方をいっしょに覚えましょう！",
+  "intro_en": "This is a white IKEA TILLREDA microwave with just two knobs and one round button, so it's very simple. Let's learn how to reheat food with it!",
+  "buttons": [
+    {
+      "id": "b1",
+      "panel_text": "Min · Med · Max (defrost symbol)",
+      "name_native": "パワーつまみ",
+      "name_en": "Power dial",
+      "function_native": "パワーの強さを決めます。Minはいちばん弱く、Medは中くらい、Maxはいちばん強いです。Minの次にある点は解凍の設定です。",
+      "function_en": "Sets the power level: Min lowest, Med medium, Max highest; the dot after Min is the defrost setting.",
+      "box": {
+        "x": 711,
+        "y": 477,
+        "w": 70,
+        "h": 55
+      }
+    },
+    {
+      "id": "b2",
+      "panel_text": "Clock symbol, 0–30",
+      "name_native": "タイマーつまみ",
+      "name_en": "Timer dial",
+      "function_native": "温める時間を決めます（0〜30分）。0から回すと、電子レンジが動き始めます。",
+      "function_en": "Sets cooking time (0 to 30 minutes); turning it away from 0 starts the oven.",
+      "box": {
+        "x": 701,
+        "y": 568,
+        "w": 73,
+        "h": 55
+      }
+    },
+    {
+      "id": "b3",
+      "panel_text": "Round button (no label)",
+      "name_native": "ドアを開けるボタン",
+      "name_en": "Door open button",
+      "function_native": "押すとドアが開きます。",
+      "function_en": "Press to open the door.",
+      "box": {
+        "x": 696,
+        "y": 666,
+        "w": 63,
+        "h": 47
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "button_id": "b3",
+      "action_native": "ドアを開けるボタンを押す",
+      "action_en": "Press the door open button",
+      "narration_native": "まず、右下にある白い丸いボタンを見つけてください。やさしく押すと、ドアが開きます。",
+      "narration_en": "First, find the white round button at the bottom right. Press it gently and the door will open.",
+      "sources": [
+        "https://www.manualslib.com/manual/2111725/Ikea-Tillreda-204-933-60.html?page=21",
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 2,
+      "button_id": null,
+      "action_native": "ガラスの回転皿を確認する",
+      "action_en": "Check the glass turntable",
+      "narration_native": "中を見て、ガラスのお皿が回転リングの上に平らにのっているか確かめてください。両方ともきちんと置かれている必要があります。",
+      "narration_en": "Look inside and make sure the glass tray sits flat on the roller ring. Both parts must be in place.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 3,
+      "button_id": null,
+      "action_native": "食べ物を入れてドアを閉める",
+      "action_en": "Put the food in and close the door",
+      "narration_native": "電子レンジで使える器に食べ物を入れて、お皿のまん中に置きます。それからドアをしっかり閉めてください。ドアがきちんと閉まっていないと温まりません。",
+      "narration_en": "Put the food in a microwave-safe dish in the middle of the tray. Then close the door firmly; it won't heat if the door isn't fully shut.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 4,
+      "button_id": "b1",
+      "action_native": "上のつまみをMaxに回す",
+      "action_en": "Turn the top dial to Max",
+      "narration_native": "右側の上のつまみがパワーつまみです。ふつうに温めるときは、右に回して「Max」の印に合わせてください。",
+      "narration_en": "The top knob on the right is the power dial. For normal reheating, turn it to the right, to the mark labelled Max.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/604-933-58-tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 5,
+      "button_id": "b2",
+      "action_native": "タイマーつまみを回して時間を決める",
+      "action_en": "Turn the timer dial to set the time",
+      "narration_native": "小さな時計のマークがある真ん中のつまみがタイマーです。時計回りに回して、温めたい分数に合わせます。たとえば2分です。回すとすぐに電子レンジが自動で動き始め、お皿が回って、中が明るくなります。",
+      "narration_en": "The middle knob with the little clock icon is the timer. Turn it clockwise to the minutes you want, for example 2. As soon as you turn it, the oven starts by itself, the tray spins and the light comes on.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/604-933-58-tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 6,
+      "button_id": "b3",
+      "action_native": "「チン」と鳴ったら、ボタンを押してドアを開ける",
+      "action_en": "After the ding, press the button to open the door",
+      "narration_native": "時間になると「チン」と鳴って、自動で止まります。もう一度丸いボタンを押してドアを開け、熱い食べ物を気をつけて取り出してください。",
+      "narration_en": "When time is up, the oven dings and stops by itself. Press the round button again to open the door and carefully take out your hot food.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    }
+  ],
+  "tips": [
+    {
+      "native": "途中で食べ物を取り出すときは、先にタイマーを0に戻してください。使わないときは、いつもタイマーを0にしておきましょう。",
+      "en": "If you take food out early, turn the timer back to 0 first. Always leave the timer at 0 when not in use."
+    },
+    {
+      "native": "解凍するときは、パワーつまみをMinの次にある解凍マークの点に合わせてから、時間を決めてください。",
+      "en": "To defrost, turn the power dial to the dot after Min with the defrost symbol, then set the time."
+    },
+    {
+      "native": "タイマーには1分より短い細かい目もりがないので、短い時間は目安で合わせてください。少し短めにして、足りなければ追加しましょう。",
+      "en": "The timer has no fine marks under 1 minute, so estimate short times; set a little less and add more if needed."
+    },
+    {
+      "native": "お掃除のコツ：器にレモン半分と水300 mlを入れ、Maxで10分温めます。そのあと、やわらかい布で中をふいてください。",
+      "en": "Cleaning trick: put half a lemon in a bowl with 300 ml of water, run on Max for 10 minutes, then wipe the inside with a soft cloth."
+    },
+    {
+      "native": "器が使えるか分からないときは、空の器を水250 ml（冷たい水）といっしょに入れ、Maxで1分温めます。器が温かくなったら、その器は使わないでください。",
+      "en": "Not sure if a dish is safe? Put it in empty with 250 ml cold water, run on Max for 1 minute. If the dish gets warm, don't use it."
+    }
+  ],
+  "warnings": [
+    {
+      "native": "中に何も入れずに電子レンジを動かさないでください。故障の原因になります。",
+      "en": "Never run the microwave empty; it can damage the oven."
+    },
+    {
+      "native": "金属はだめです。アルミホイル、金のふちのある器、金属入りの留め具（ねじり留め）は火花が出ることがあります。",
+      "en": "No metal: foil, metal-trimmed dishes or twist-ties can cause sparks."
+    },
+    {
+      "native": "殻つきの卵や、ふたを閉めたびんは温めないでください。破裂することがあります。",
+      "en": "Don't heat eggs in their shells or sealed jars; they can explode."
+    },
+    {
+      "native": "温めた水や飲み物は、急にふきこぼれることがあります。気をつけて扱ってください。赤ちゃんの食べ物は、よくかき混ぜて温度を確かめてから食べさせてください。",
+      "en": "Heated water or drinks can suddenly boil over. Handle carefully, and stir and test baby food before feeding."
+    },
+    {
+      "native": "中で火が出たら、ドアは閉めたままにしてください！タイマーを0に戻して、コンセントを抜いてください。",
+      "en": "If something catches fire inside, keep the door closed! Turn the timer to 0 and unplug it."
+    },
+    {
+      "native": "電子レンジがこわれたり動かなかったりしたときは、絶対に自分でカバーを開けないでください。IKEAの公式サポートか大家さんに連絡してください。",
+      "en": "If the microwave is broken or won't work, never open the casing yourself; contact IKEA official support or your landlord."
+    }
+  ],
+  "closing_native": "これで終わりです！ドアを開けて、食べ物を入れて、ドアを閉めて、パワーを選んで、タイマーを回す。これだけです。どうぞ召し上がれ！",
+  "closing_en": "That's all! Remember: open the door, put food in, close it, choose the power, then turn the timer. Enjoy your meal!",
+  "sources": [
+    {
+      "id": 1,
+      "title": "IKEA TILLREDA MANUAL Pdf Download",
+      "url": "https://www.manualslib.com/manual/3010000/Ikea-Tillreda.html",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 2,
+      "title": "IKEA TILLREDA 204.933.60 Instructions Manual (Page 21 of 32)",
+      "url": "https://www.manualslib.com/manual/2111725/Ikea-Tillreda-204-933-60.html?page=21",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 3,
+      "title": "IKEA 604.933.58 TILLREDA Microwave Oven Instruction Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/604-933-58-tillreda-microwave-oven-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 4,
+      "title": "IKEA TILLREDA 304.931.09 Microwave Oven User Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 5,
+      "title": "IKEA TILLREDA Microwave Oven - User Manual and Specifications",
+      "url": "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 6,
+      "title": "TILLREDA Microwave Oven User Manual",
+      "url": "https://manuals.plus/m/1d336a5ac54101e2bdda44b44bbf998d2dd8f7423406cb5b1c8d7449670f2f0b",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 7,
+      "title": "IKEA TILLREDA Portable Induction Hob Instruction Manual",
+      "url": "https://manuals.plus/m/d64407ef82320add40d3e17380e277f659a2c2dc8aeac120f74fb3cfb32119ae",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 8,
+      "title": "IKEA TILLREDA Portable Induction Hob User Manual",
+      "url": "https://manuals.plus/m/7d8d8026d63dd0523a48cf7acfaa373342efce64dbf5d79786c7a8af60a66c77",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 9,
+      "title": "IKEA Tillreda Portable induction hob Owner's Manual",
+      "url": "https://manuals.plus/m/7ff04dc73441f6128680d366961c36023cf0c7b9c9d7d70beb4fa03d45a59a7e",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 10,
+      "title": "Manuals+ Home › Ikea › IKEA TILLREDA User Manual IKEA TILLREDA User Manual",
+      "url": "https://manuals.plus/ikea/ikea-tillreda-manual.pdf",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 11,
+      "title": "TILLREDA microwave oven, white - IKEA",
+      "url": "https://www.ikea.com/us/en/p/tillreda-microwave-oven-white-40493420/",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 12,
+      "title": "Ikea: Best buys and what to avoid - CHOICE",
+      "url": "https://www.choice.com.au/shopping/everyday-shopping/bargain-hunting/articles/ikea-best-buys-and-things-to-avoid",
+      "kind": "web",
+      "cited": false
+    }
+  ],
+  "media_id": "2026-11-15T01-20-02-074Z-75aecb"
+}

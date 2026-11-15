@@ -1,0 +1,41 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-15T09-27-00-585Z-54d3f4",
+  "tutorial_id": "2026-11-15T09-27-00-585Z-54d3f4",
+  "generated_at": "2026-11-15T09:27:00.585Z",
+  "language": {
+    "code": "vi",
+    "name": "Vietnamese"
+  },
+  "safety": "blocked",
+  "recognized": true,
+  "safety_kind": "gas",
+  "safety_message_native": "Đây là nồi hơi dùng gas; thao tác sai có thể gây rò rỉ gas hoặc ngộ độc khí CO. Vì sự an toàn của bạn, tôi không thể hướng dẫn việc này. Xin đừng tự làm — hãy liên hệ bộ phận hỗ trợ chính hãng của Vexa hoặc chủ nhà. Nếu ngửi thấy mùi ga, hãy mở cửa sổ, rời khỏi phòng và gọi đường dây khẩn cấp về ga (tại Anh: 0800 111 999).",
+  "safety_message_en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999).",
+  "contact": {
+    "brand": "Vexa",
+    "advice_native": "Vì sự an toàn của bạn, tôi không thể hướng dẫn việc này. Xin đừng tự làm — hãy liên hệ bộ phận hỗ trợ chính hãng của Vexa hoặc chủ nhà. Nếu ngửi thấy mùi ga, hãy mở cửa sổ, rời khỏi phòng và gọi đường dây khẩn cấp về ga (tại Anh: 0800 111 999).",
+    "advice_en": "For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999)."
+  },
+  "appliance_native": "Nồi hơi gas",
+  "appliance_en": "Gas boiler",
+  "brand": "Vexa (demo)",
+  "model": "unknown",
+  "model_confidence": "low",
+  "goal_native": "",
+  "goal_en": "",
+  "intro_native": "Đây là nồi hơi dùng gas; thao tác sai có thể gây rò rỉ gas hoặc ngộ độc khí CO. Vì sự an toàn của bạn, tôi không thể hướng dẫn việc này. Xin đừng tự làm — hãy liên hệ bộ phận hỗ trợ chính hãng của Vexa hoặc chủ nhà. Nếu ngửi thấy mùi ga, hãy mở cửa sổ, rời khỏi phòng và gọi đường dây khẩn cấp về ga (tại Anh: 0800 111 999).",
+  "intro_en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999).",
+  "buttons": [],
+  "steps": [],
+  "tips": [],
+  "warnings": [
+    {
+      "native": "Đây là nồi hơi dùng gas; thao tác sai có thể gây rò rỉ gas hoặc ngộ độc khí CO. Vì sự an toàn của bạn, tôi không thể hướng dẫn việc này. Xin đừng tự làm — hãy liên hệ bộ phận hỗ trợ chính hãng của Vexa hoặc chủ nhà. Nếu ngửi thấy mùi ga, hãy mở cửa sổ, rời khỏi phòng và gọi đường dây khẩn cấp về ga (tại Anh: 0800 111 999).",
+      "en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999)."
+    }
+  ],
+  "sources": [],
+  "closing_native": "",
+  "closing_en": ""
+}

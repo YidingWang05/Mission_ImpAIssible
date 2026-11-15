@@ -1,0 +1,273 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-15T01-20-02-074Z-75aecb-vi",
+  "tutorial_id": "2026-11-15T01-20-02-074Z-75aecb-vi",
+  "generated_at": "2026-11-15T09:26:58.770Z",
+  "language": {
+    "code": "vi",
+    "name": "Vietnamese"
+  },
+  "safety": "ok",
+  "recognized": true,
+  "appliance_native": "Lò vi sóng",
+  "appliance_en": "Microwave oven",
+  "brand": "IKEA",
+  "model": "TILLREDA (likely article 304.931.09, 20 L, 700 W)",
+  "model_confidence": "medium",
+  "goal_native": "Hâm nóng thức ăn bằng lò vi sóng",
+  "goal_en": "Reheat food in the microwave",
+  "intro_native": "Đây là lò vi sóng IKEA TILLREDA màu trắng, chỉ có hai núm xoay và một nút tròn, nên rất dễ dùng. Cùng học cách hâm nóng thức ăn nhé!",
+  "intro_en": "This is a white IKEA TILLREDA microwave with just two knobs and one round button, so it's very simple. Let's learn how to reheat food with it!",
+  "buttons": [
+    {
+      "id": "b1",
+      "panel_text": "Min · Med · Max (defrost symbol)",
+      "name_native": "Núm công suất",
+      "name_en": "Power dial",
+      "function_native": "Chọn mức công suất: Min là thấp nhất, Med là vừa, Max là cao nhất; dấu chấm sau Min là chế độ rã đông.",
+      "function_en": "Sets the power level: Min lowest, Med medium, Max highest; the dot after Min is the defrost setting.",
+      "box": {
+        "x": 711,
+        "y": 477,
+        "w": 70,
+        "h": 55
+      }
+    },
+    {
+      "id": "b2",
+      "panel_text": "Clock symbol, 0–30",
+      "name_native": "Núm hẹn giờ",
+      "name_en": "Timer dial",
+      "function_native": "Chọn thời gian nấu (từ 0 đến 30 phút); vặn ra khỏi số 0 là lò bắt đầu chạy.",
+      "function_en": "Sets cooking time (0 to 30 minutes); turning it away from 0 starts the oven.",
+      "box": {
+        "x": 701,
+        "y": 568,
+        "w": 73,
+        "h": 55
+      }
+    },
+    {
+      "id": "b3",
+      "panel_text": "Round button (no label)",
+      "name_native": "Nút mở cửa",
+      "name_en": "Door open button",
+      "function_native": "Nhấn để mở cửa.",
+      "function_en": "Press to open the door.",
+      "box": {
+        "x": 696,
+        "y": 666,
+        "w": 63,
+        "h": 47
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "button_id": "b3",
+      "action_native": "Nhấn nút mở cửa",
+      "action_en": "Press the door open button",
+      "narration_native": "Đầu tiên, tìm nút tròn màu trắng ở góc dưới bên phải. Nhấn nhẹ, cửa sẽ mở ra.",
+      "narration_en": "First, find the white round button at the bottom right. Press it gently and the door will open.",
+      "sources": [
+        "https://www.manualslib.com/manual/2111725/Ikea-Tillreda-204-933-60.html?page=21",
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 2,
+      "button_id": null,
+      "action_native": "Kiểm tra đĩa xoay bằng kính",
+      "action_en": "Check the glass turntable",
+      "narration_native": "Nhìn vào trong, xem đĩa kính có nằm phẳng trên vòng con lăn không. Cả hai phải được đặt đúng chỗ.",
+      "narration_en": "Look inside and make sure the glass tray sits flat on the roller ring. Both parts must be in place.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 3,
+      "button_id": null,
+      "action_native": "Cho thức ăn vào và đóng cửa",
+      "action_en": "Put the food in and close the door",
+      "narration_native": "Để thức ăn trong bát đĩa dùng được cho lò vi sóng, đặt ở giữa đĩa xoay. Rồi đóng chặt cửa; nếu cửa chưa đóng kín, lò sẽ không nóng.",
+      "narration_en": "Put the food in a microwave-safe dish in the middle of the tray. Then close the door firmly; it won't heat if the door isn't fully shut.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 4,
+      "button_id": "b1",
+      "action_native": "Vặn núm trên cùng đến Max",
+      "action_en": "Turn the top dial to Max",
+      "narration_native": "Núm trên cùng bên phải là núm công suất. Để hâm nóng bình thường, vặn sang phải, đến vạch ghi Max.",
+      "narration_en": "The top knob on the right is the power dial. For normal reheating, turn it to the right, to the mark labelled Max.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/604-933-58-tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 5,
+      "button_id": "b2",
+      "action_native": "Vặn núm hẹn giờ để chọn thời gian",
+      "action_en": "Turn the timer dial to set the time",
+      "narration_native": "Núm ở giữa có hình đồng hồ nhỏ là núm hẹn giờ. Vặn theo chiều kim đồng hồ đến số phút bạn muốn, ví dụ 2. Vừa vặn xong, lò tự chạy, đĩa quay và đèn sáng lên.",
+      "narration_en": "The middle knob with the little clock icon is the timer. Turn it clockwise to the minutes you want, for example 2. As soon as you turn it, the oven starts by itself, the tray spins and the light comes on.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/604-933-58-tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 6,
+      "button_id": "b3",
+      "action_native": "Sau tiếng \"ding\", nhấn nút để mở cửa",
+      "action_en": "After the ding, press the button to open the door",
+      "narration_native": "Khi hết giờ, lò kêu \"ding\" và tự dừng. Nhấn nút tròn lần nữa để mở cửa, rồi cẩn thận lấy thức ăn nóng ra.",
+      "narration_en": "When time is up, the oven dings and stops by itself. Press the round button again to open the door and carefully take out your hot food.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    }
+  ],
+  "tips": [
+    {
+      "native": "Nếu muốn lấy thức ăn ra sớm, hãy vặn núm hẹn giờ về 0 trước. Khi không dùng, luôn để núm hẹn giờ ở số 0.",
+      "en": "If you take food out early, turn the timer back to 0 first. Always leave the timer at 0 when not in use."
+    },
+    {
+      "native": "Để rã đông, vặn núm công suất đến dấu chấm sau Min có biểu tượng rã đông, rồi chọn thời gian.",
+      "en": "To defrost, turn the power dial to the dot after Min with the defrost symbol, then set the time."
+    },
+    {
+      "native": "Núm hẹn giờ không có vạch nhỏ dưới 1 phút, nên hãy ước chừng cho thời gian ngắn; đặt ít hơn một chút rồi thêm nếu cần.",
+      "en": "The timer has no fine marks under 1 minute, so estimate short times; set a little less and add more if needed."
+    },
+    {
+      "native": "Mẹo vệ sinh: cho nửa quả chanh vào bát với 300 ml nước, chạy ở Max trong 10 phút, rồi lau bên trong bằng khăn mềm.",
+      "en": "Cleaning trick: put half a lemon in a bowl with 300 ml of water, run on Max for 10 minutes, then wipe the inside with a soft cloth."
+    },
+    {
+      "native": "Không chắc bát đĩa có an toàn không? Đặt bát đĩa rỗng vào cùng 250 ml nước lạnh, chạy ở Max trong 1 phút. Nếu bát đĩa bị ấm lên, đừng dùng nó.",
+      "en": "Not sure if a dish is safe? Put it in empty with 250 ml cold water, run on Max for 1 minute. If the dish gets warm, don't use it."
+    }
+  ],
+  "warnings": [
+    {
+      "native": "Không bao giờ chạy lò khi trống; việc này có thể làm hỏng lò.",
+      "en": "Never run the microwave empty; it can damage the oven."
+    },
+    {
+      "native": "Không dùng kim loại: giấy bạc, bát đĩa viền kim loại hay dây buộc có lõi kim loại có thể gây tia lửa.",
+      "en": "No metal: foil, metal-trimmed dishes or twist-ties can cause sparks."
+    },
+    {
+      "native": "Không hâm trứng còn vỏ hay lọ đậy kín; chúng có thể nổ.",
+      "en": "Don't heat eggs in their shells or sealed jars; they can explode."
+    },
+    {
+      "native": "Nước hoặc đồ uống vừa hâm có thể bất ngờ sôi trào. Hãy cầm cẩn thận, và khuấy đều, thử nhiệt độ thức ăn của em bé trước khi cho ăn.",
+      "en": "Heated water or drinks can suddenly boil over. Handle carefully, and stir and test baby food before feeding."
+    },
+    {
+      "native": "Nếu có lửa bên trong, hãy giữ cửa đóng! Vặn núm hẹn giờ về 0 và rút phích cắm.",
+      "en": "If something catches fire inside, keep the door closed! Turn the timer to 0 and unplug it."
+    },
+    {
+      "native": "Nếu lò bị hỏng hoặc không chạy, đừng bao giờ tự mở vỏ lò; hãy liên hệ bộ phận hỗ trợ chính thức của IKEA hoặc chủ nhà.",
+      "en": "If the microwave is broken or won't work, never open the casing yourself; contact IKEA official support or your landlord."
+    }
+  ],
+  "closing_native": "Vậy là xong! Hãy nhớ: mở cửa, cho thức ăn vào, đóng cửa, chọn công suất, rồi vặn hẹn giờ. Chúc bạn ăn ngon!",
+  "closing_en": "That's all! Remember: open the door, put food in, close it, choose the power, then turn the timer. Enjoy your meal!",
+  "sources": [
+    {
+      "id": 1,
+      "title": "IKEA TILLREDA MANUAL Pdf Download",
+      "url": "https://www.manualslib.com/manual/3010000/Ikea-Tillreda.html",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 2,
+      "title": "IKEA TILLREDA 204.933.60 Instructions Manual (Page 21 of 32)",
+      "url": "https://www.manualslib.com/manual/2111725/Ikea-Tillreda-204-933-60.html?page=21",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 3,
+      "title": "IKEA 604.933.58 TILLREDA Microwave Oven Instruction Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/604-933-58-tillreda-microwave-oven-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 4,
+      "title": "IKEA TILLREDA 304.931.09 Microwave Oven User Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 5,
+      "title": "IKEA TILLREDA Microwave Oven - User Manual and Specifications",
+      "url": "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 6,
+      "title": "TILLREDA Microwave Oven User Manual",
+      "url": "https://manuals.plus/m/1d336a5ac54101e2bdda44b44bbf998d2dd8f7423406cb5b1c8d7449670f2f0b",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 7,
+      "title": "IKEA TILLREDA Portable Induction Hob Instruction Manual",
+      "url": "https://manuals.plus/m/d64407ef82320add40d3e17380e277f659a2c2dc8aeac120f74fb3cfb32119ae",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 8,
+      "title": "IKEA TILLREDA Portable Induction Hob User Manual",
+      "url": "https://manuals.plus/m/7d8d8026d63dd0523a48cf7acfaa373342efce64dbf5d79786c7a8af60a66c77",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 9,
+      "title": "IKEA Tillreda Portable induction hob Owner's Manual",
+      "url": "https://manuals.plus/m/7ff04dc73441f6128680d366961c36023cf0c7b9c9d7d70beb4fa03d45a59a7e",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 10,
+      "title": "Manuals+ Home › Ikea › IKEA TILLREDA User Manual IKEA TILLREDA User Manual",
+      "url": "https://manuals.plus/ikea/ikea-tillreda-manual.pdf",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 11,
+      "title": "TILLREDA microwave oven, white - IKEA",
+      "url": "https://www.ikea.com/us/en/p/tillreda-microwave-oven-white-40493420/",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 12,
+      "title": "Ikea: Best buys and what to avoid - CHOICE",
+      "url": "https://www.choice.com.au/shopping/everyday-shopping/bargain-hunting/articles/ikea-best-buys-and-things-to-avoid",
+      "kind": "web",
+      "cited": false
+    }
+  ],
+  "media_id": "2026-11-15T01-20-02-074Z-75aecb"
+}

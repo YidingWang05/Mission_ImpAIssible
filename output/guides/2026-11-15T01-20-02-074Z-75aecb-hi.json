@@ -1,0 +1,273 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-15T01-20-02-074Z-75aecb-hi",
+  "tutorial_id": "2026-11-15T01-20-02-074Z-75aecb-hi",
+  "generated_at": "2026-11-15T09:26:55.520Z",
+  "language": {
+    "code": "hi",
+    "name": "Hindi"
+  },
+  "safety": "ok",
+  "recognized": true,
+  "appliance_native": "माइक्रोवेव ओवन",
+  "appliance_en": "Microwave oven",
+  "brand": "IKEA",
+  "model": "TILLREDA (likely article 304.931.09, 20 L, 700 W)",
+  "model_confidence": "medium",
+  "goal_native": "माइक्रोवेव में खाना गरम करें",
+  "goal_en": "Reheat food in the microwave",
+  "intro_native": "यह एक सफ़ेद IKEA TILLREDA माइक्रोवेव है। इसमें सिर्फ़ दो नॉब और एक गोल बटन है, इसलिए यह बहुत आसान है। चलिए, इससे खाना गरम करना सीखते हैं!",
+  "intro_en": "This is a white IKEA TILLREDA microwave with just two knobs and one round button, so it's very simple. Let's learn how to reheat food with it!",
+  "buttons": [
+    {
+      "id": "b1",
+      "panel_text": "Min · Med · Max (defrost symbol)",
+      "name_native": "पावर डायल",
+      "name_en": "Power dial",
+      "function_native": "पावर लेवल सेट करता है: Min सबसे कम, Med मध्यम, Max सबसे ज़्यादा। Min के बाद वाला बिंदु डीफ़्रॉस्ट (बर्फ़ पिघलाने) के लिए है।",
+      "function_en": "Sets the power level: Min lowest, Med medium, Max highest; the dot after Min is the defrost setting.",
+      "box": {
+        "x": 711,
+        "y": 477,
+        "w": 70,
+        "h": 55
+      }
+    },
+    {
+      "id": "b2",
+      "panel_text": "Clock symbol, 0–30",
+      "name_native": "टाइमर डायल",
+      "name_en": "Timer dial",
+      "function_native": "खाना पकाने का समय सेट करता है (0 से 30 मिनट)। इसे 0 से घुमाते ही ओवन चालू हो जाता है।",
+      "function_en": "Sets cooking time (0 to 30 minutes); turning it away from 0 starts the oven.",
+      "box": {
+        "x": 701,
+        "y": 568,
+        "w": 73,
+        "h": 55
+      }
+    },
+    {
+      "id": "b3",
+      "panel_text": "Round button (no label)",
+      "name_native": "दरवाज़ा खोलने का बटन",
+      "name_en": "Door open button",
+      "function_native": "दरवाज़ा खोलने के लिए दबाएँ।",
+      "function_en": "Press to open the door.",
+      "box": {
+        "x": 696,
+        "y": 666,
+        "w": 63,
+        "h": 47
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "button_id": "b3",
+      "action_native": "दरवाज़ा खोलने का बटन दबाएँ",
+      "action_en": "Press the door open button",
+      "narration_native": "सबसे पहले, नीचे दाईं ओर सफ़ेद गोल बटन ढूँढें। इसे धीरे से दबाएँ, दरवाज़ा खुल जाएगा।",
+      "narration_en": "First, find the white round button at the bottom right. Press it gently and the door will open.",
+      "sources": [
+        "https://www.manualslib.com/manual/2111725/Ikea-Tillreda-204-933-60.html?page=21",
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 2,
+      "button_id": null,
+      "action_native": "काँच की घूमने वाली प्लेट देखें",
+      "action_en": "Check the glass turntable",
+      "narration_native": "अंदर देखें कि काँच की प्लेट रोलर रिंग पर सीधी रखी है। दोनों हिस्से सही जगह पर होने चाहिए।",
+      "narration_en": "Look inside and make sure the glass tray sits flat on the roller ring. Both parts must be in place.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 3,
+      "button_id": null,
+      "action_native": "खाना अंदर रखें और दरवाज़ा बंद करें",
+      "action_en": "Put the food in and close the door",
+      "narration_native": "खाने को माइक्रोवेव में चलने वाले बर्तन में रखकर प्लेट के बीच में रखें। फिर दरवाज़ा ठीक से बंद करें। दरवाज़ा पूरा बंद न हो तो यह गरम नहीं करेगा।",
+      "narration_en": "Put the food in a microwave-safe dish in the middle of the tray. Then close the door firmly; it won't heat if the door isn't fully shut.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 4,
+      "button_id": "b1",
+      "action_native": "ऊपर वाला डायल Max पर घुमाएँ",
+      "action_en": "Turn the top dial to Max",
+      "narration_native": "दाईं ओर ऊपर वाला नॉब पावर डायल है। आम तौर पर खाना गरम करने के लिए इसे दाईं ओर Max लिखे निशान तक घुमाएँ।",
+      "narration_en": "The top knob on the right is the power dial. For normal reheating, turn it to the right, to the mark labelled Max.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/604-933-58-tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 5,
+      "button_id": "b2",
+      "action_native": "समय सेट करने के लिए टाइमर डायल घुमाएँ",
+      "action_en": "Turn the timer dial to set the time",
+      "narration_native": "बीच वाला नॉब, जिस पर छोटी घड़ी का निशान है, टाइमर है। इसे घड़ी की दिशा में अपने चाहे मिनट तक घुमाएँ, जैसे 2। घुमाते ही ओवन अपने आप चालू हो जाता है, प्लेट घूमने लगती है और लाइट जल जाती है।",
+      "narration_en": "The middle knob with the little clock icon is the timer. Turn it clockwise to the minutes you want, for example 2. As soon as you turn it, the oven starts by itself, the tray spins and the light comes on.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/604-933-58-tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 6,
+      "button_id": "b3",
+      "action_native": "\"डिंग\" की आवाज़ के बाद बटन दबाकर दरवाज़ा खोलें",
+      "action_en": "After the ding, press the button to open the door",
+      "narration_native": "समय पूरा होने पर ओवन \"डिंग\" करता है और अपने आप रुक जाता है। गोल बटन फिर से दबाकर दरवाज़ा खोलें और गरम खाना सावधानी से बाहर निकालें।",
+      "narration_en": "When time is up, the oven dings and stops by itself. Press the round button again to open the door and carefully take out your hot food.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual"
+      ]
+    }
+  ],
+  "tips": [
+    {
+      "native": "अगर खाना पहले निकालना हो, तो पहले टाइमर को वापस 0 पर घुमाएँ। इस्तेमाल न करते समय टाइमर हमेशा 0 पर रखें।",
+      "en": "If you take food out early, turn the timer back to 0 first. Always leave the timer at 0 when not in use."
+    },
+    {
+      "native": "बर्फ़ पिघलाने के लिए, पावर डायल को Min के बाद वाले डीफ़्रॉस्ट निशान वाले बिंदु पर घुमाएँ, फिर समय सेट करें।",
+      "en": "To defrost, turn the power dial to the dot after Min with the defrost symbol, then set the time."
+    },
+    {
+      "native": "टाइमर पर 1 मिनट से कम के छोटे निशान नहीं हैं, इसलिए छोटा समय अंदाज़े से लगाएँ। थोड़ा कम समय रखें, ज़रूरत हो तो और बढ़ा दें।",
+      "en": "The timer has no fine marks under 1 minute, so estimate short times; set a little less and add more if needed."
+    },
+    {
+      "native": "सफ़ाई का तरीका: एक कटोरे में 300 ml पानी और आधा नींबू डालें, Max पर 10 मिनट चलाएँ, फिर अंदर से मुलायम कपड़े से पोंछ दें।",
+      "en": "Cleaning trick: put half a lemon in a bowl with 300 ml of water, run on Max for 10 minutes, then wipe the inside with a soft cloth."
+    },
+    {
+      "native": "पता नहीं कि बर्तन सुरक्षित है या नहीं? उसे खाली अंदर रखें, साथ में 250 ml ठंडा पानी रखें, और Max पर 1 मिनट चलाएँ। अगर बर्तन गरम हो जाए, तो उसका इस्तेमाल न करें।",
+      "en": "Not sure if a dish is safe? Put it in empty with 250 ml cold water, run on Max for 1 minute. If the dish gets warm, don't use it."
+    }
+  ],
+  "warnings": [
+    {
+      "native": "माइक्रोवेव को कभी खाली न चलाएँ, इससे ओवन खराब हो सकता है।",
+      "en": "Never run the microwave empty; it can damage the oven."
+    },
+    {
+      "native": "धातु बिल्कुल नहीं: फ़ॉइल, धातु की किनारी वाले बर्तन या तार वाले क्लिप से चिंगारी निकल सकती है।",
+      "en": "No metal: foil, metal-trimmed dishes or twist-ties can cause sparks."
+    },
+    {
+      "native": "छिलके वाले अंडे या बंद जार गरम न करें, वे फट सकते हैं।",
+      "en": "Don't heat eggs in their shells or sealed jars; they can explode."
+    },
+    {
+      "native": "गरम पानी या पेय अचानक उबलकर बाहर आ सकते हैं। सावधानी से पकड़ें। बच्चे का खाना खिलाने से पहले हिलाएँ और जाँच लें।",
+      "en": "Heated water or drinks can suddenly boil over. Handle carefully, and stir and test baby food before feeding."
+    },
+    {
+      "native": "अगर अंदर आग लग जाए, तो दरवाज़ा बंद ही रखें! टाइमर को 0 पर घुमाएँ और प्लग निकाल दें।",
+      "en": "If something catches fire inside, keep the door closed! Turn the timer to 0 and unplug it."
+    },
+    {
+      "native": "अगर माइक्रोवेव खराब है या चल नहीं रहा, तो खुद कभी उसका ढक्कन न खोलें। IKEA की आधिकारिक सहायता या अपने मकान मालिक से संपर्क करें।",
+      "en": "If the microwave is broken or won't work, never open the casing yourself; contact IKEA official support or your landlord."
+    }
+  ],
+  "closing_native": "बस इतना ही! याद रखें: दरवाज़ा खोलें, खाना अंदर रखें, दरवाज़ा बंद करें, पावर चुनें, फिर टाइमर घुमाएँ। खाने का मज़ा लें!",
+  "closing_en": "That's all! Remember: open the door, put food in, close it, choose the power, then turn the timer. Enjoy your meal!",
+  "sources": [
+    {
+      "id": 1,
+      "title": "IKEA TILLREDA MANUAL Pdf Download",
+      "url": "https://www.manualslib.com/manual/3010000/Ikea-Tillreda.html",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 2,
+      "title": "IKEA TILLREDA 204.933.60 Instructions Manual (Page 21 of 32)",
+      "url": "https://www.manualslib.com/manual/2111725/Ikea-Tillreda-204-933-60.html?page=21",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 3,
+      "title": "IKEA 604.933.58 TILLREDA Microwave Oven Instruction Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/604-933-58-tillreda-microwave-oven-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 4,
+      "title": "IKEA TILLREDA 304.931.09 Microwave Oven User Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 5,
+      "title": "IKEA TILLREDA Microwave Oven - User Manual and Specifications",
+      "url": "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 6,
+      "title": "TILLREDA Microwave Oven User Manual",
+      "url": "https://manuals.plus/m/1d336a5ac54101e2bdda44b44bbf998d2dd8f7423406cb5b1c8d7449670f2f0b",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 7,
+      "title": "IKEA TILLREDA Portable Induction Hob Instruction Manual",
+      "url": "https://manuals.plus/m/d64407ef82320add40d3e17380e277f659a2c2dc8aeac120f74fb3cfb32119ae",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 8,
+      "title": "IKEA TILLREDA Portable Induction Hob User Manual",
+      "url": "https://manuals.plus/m/7d8d8026d63dd0523a48cf7acfaa373342efce64dbf5d79786c7a8af60a66c77",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 9,
+      "title": "IKEA Tillreda Portable induction hob Owner's Manual",
+      "url": "https://manuals.plus/m/7ff04dc73441f6128680d366961c36023cf0c7b9c9d7d70beb4fa03d45a59a7e",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 10,
+      "title": "Manuals+ Home › Ikea › IKEA TILLREDA User Manual IKEA TILLREDA User Manual",
+      "url": "https://manuals.plus/ikea/ikea-tillreda-manual.pdf",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 11,
+      "title": "TILLREDA microwave oven, white - IKEA",
+      "url": "https://www.ikea.com/us/en/p/tillreda-microwave-oven-white-40493420/",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 12,
+      "title": "Ikea: Best buys and what to avoid - CHOICE",
+      "url": "https://www.choice.com.au/shopping/everyday-shopping/bargain-hunting/articles/ikea-best-buys-and-things-to-avoid",
+      "kind": "web",
+      "cited": false
+    }
+  ],
+  "media_id": "2026-11-15T01-20-02-074Z-75aecb"
+}

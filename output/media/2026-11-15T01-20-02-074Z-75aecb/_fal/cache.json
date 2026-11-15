@@ -1,0 +1,68 @@
+{
+ "6aacec9564b0b4b4": {
+  "output": "{\"prompt\": \"Static locked-off shot of the white microwave with its opaque dark glossy glass door, white frame, and two white knobs, exactly as in the original photo. One hand enters from the right side, and the index finger presses the round white button at the bottom of the right control panel, below the lower knob. The door unlatches and swings open to the left on its left hinge, the interior light turns on, and the interior and turntable become visible. The hand withdraws out of frame, and the last second is still with the door open.\", \"duration\": 5, \"end_state\": \"The microwave door is open with the interior light on, the knobs are still at their original positions, and no hand is in the frame.\"}"
+ },
+ "8c794d28604fca94": {
+  "video": {
+   "url": "https://v3b.fal.media/files/b/0ab280f9/soPSuT2xSQ6nzzgzqoCTa_output.mp4",
+   "content_type": "video/mp4",
+   "file_name": "output.mp4",
+   "file_size": 15537533
+  }
+ },
+ "3848e5fb6f149471": {
+  "output": "{\"prompt\": \"Static locked-off shot of the white microwave with its door open to the left and the interior light on. One hand enters from the right, index finger extended, and gently touches the rim of the clear glass turntable tray, pressing lightly to show it sits flat on the roller ring. The hand then slides slightly to point at the central hub, then withdraws out of frame. The knobs stay at their original positions. When closed, the door is opaque black glass with a white frame, as in the original photo. The last second is still.\", \"duration\": 5, \"end_state\": \"The microwave door remains open with the interior light on, the glass turntable sits flat in place, the knobs are unchanged, and no hand is in the frame.\"}"
+ },
+ "c14b2dbca5de9f3b": {
+  "video": {
+   "url": "https://v3b.fal.media/files/b/0ab28106/nwL4EBO-E5jOM3-9HPutQ_output.mp4",
+   "content_type": "video/mp4",
+   "file_name": "output.mp4",
+   "file_size": 13927191
+  }
+ },
+ "43f4efca10d28227": {
+  "output": "{\"prompt\": \"Static locked-off camera. One hand from the right side carries a small white microwave-safe bowl of food, lowers it into the open microwave behind the open door, and releases it at the centre of the tray. The hand withdraws, then returns and pushes the open door's top handle, swinging it shut on its hinge until it latches. The interior light goes off. The microwave ends exactly like the original photo: white body, opaque dark glass door with no interior visible, same knobs and markings. The hand leaves; the last second is still.\", \"duration\": 10, \"end_state\": \"The door is firmly closed with the food inside, the interior light is off, the knobs are unchanged, and the microwave looks like the original photo with its opaque dark glass door.\"}"
+ },
+ "ee455a018f2de3be": {
+  "video": {
+   "url": "https://v3b.fal.media/files/b/0ab28114/pYbXSIK0EAOk8lFcBYgKq_output.mp4",
+   "content_type": "video/mp4",
+   "file_name": "output.mp4",
+   "file_size": 28736138
+  }
+ },
+ "4f97fc59ed1e4d1d": {
+  "output": "{\"prompt\": \"Static locked-off camera. A single hand enters from the right side of the frame and pinches the upper round white power knob on the right control panel, between thumb and index finger. Slowly rotating it clockwise to the right, the knob's pointer travels to the mark labelled Max at the right of the dial, then stops. The hand releases and exits to the right. The microwave keeps its original look: closed, opaque dark glass door, white body, interior light off. The last second is still.\", \"duration\": 5, \"end_state\": \"The door is closed with the interior light off, the top power dial points at Max, and the timer dial is unchanged.\"}"
+ },
+ "59087caec4a7311c": {
+  "video": {
+   "url": "https://v3b.fal.media/files/b/0ab2811f/NWFsLUJoYqYosseAX5gxE_output.mp4",
+   "content_type": "video/mp4",
+   "file_name": "output.mp4",
+   "file_size": 13324838
+  }
+ },
+ "d84d016d58c954a7": {
+  "output": "{\"prompt\": \"Static locked-off camera. A white IKEA microwave with a closed, opaque dark glossy glass door, exactly as in the original photo; the interior is not visible through the door. One hand enters from the right and pinches the lower white timer knob with the clock icon on the right control panel, using thumb and index finger. It turns the knob slowly clockwise from 0 to the mark \\\"2\\\", then releases and withdraws out of frame. The knob pointer stays at 2. The panel, markings and lighting are unchanged. The last second is still.\", \"duration\": 5, \"end_state\": \"The door is closed and the timer dial points at about 2 minutes, so the oven is running; the top dial is still at Max.\"}"
+ },
+ "3dc505877e0b5d0a": {
+  "video": {
+   "url": "https://v3b.fal.media/files/b/0ab2812b/gOA87-3h7Ww_1lS4s-Ws0_output.mp4",
+   "content_type": "video/mp4",
+   "file_name": "output.mp4",
+   "file_size": 13726009
+  }
+ },
+ "677467124c650e3e": {
+  "output": "{\"prompt\": \"Static locked-off shot of the white microwave on the counter. The door is closed and the interior glows warm orange. One hand enters from the right side, and the index finger presses the round white button at the bottom of the right control panel. The door swings open on its left hinge toward the camera, showing the lit interior. The hand withdraws out of frame. The microwave keeps the same white body, glossy dark glass door, two white dials and printed markings as in the original photo. The last second is still, with the door open.\", \"duration\": 5, \"end_state\": \"The door is open, the interior light is on, the oven is idle, and no hand is in the frame.\"}"
+ },
+ "2654ccd9ee188506": {
+  "video": {
+   "url": "https://v3b.fal.media/files/b/0ab28133/zTweTCUe0fYJT8Mik8q0Q_output.mp4",
+   "content_type": "video/mp4",
+   "file_name": "output.mp4",
+   "file_size": 13616674
+  }
+ }
+}

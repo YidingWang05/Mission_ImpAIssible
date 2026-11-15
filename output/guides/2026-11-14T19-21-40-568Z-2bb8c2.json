@@ -1,0 +1,41 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-14T19-21-40-568Z-2bb8c2",
+  "tutorial_id": "2026-11-14T19-21-40-568Z-2bb8c2",
+  "generated_at": "2026-11-14T19:21:40.568Z",
+  "language": {
+    "code": "zh",
+    "name": "Chinese (Mandarin)"
+  },
+  "safety": "blocked",
+  "recognized": true,
+  "safety_kind": "gas",
+  "safety_message_native": "这是一台燃气锅炉，操作不当可能引起漏气或一氧化碳中毒。为了你的安全，这个操作我不能教。请不要自己动手，联系 Vexa 官方售后或房东。如果闻到煤气味，请开窗、离开房间，并拨打燃气紧急电话（英国：0800 111 999）。",
+  "safety_message_en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999).",
+  "contact": {
+    "brand": "Vexa",
+    "advice_native": "为了你的安全，这个操作我不能教。请不要自己动手，联系 Vexa 官方售后或房东。如果闻到煤气味，请开窗、离开房间，并拨打燃气紧急电话（英国：0800 111 999）。",
+    "advice_en": "For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999)."
+  },
+  "appliance_native": "燃气锅炉",
+  "appliance_en": "Gas boiler",
+  "brand": "Vexa (demo)",
+  "model": "unknown",
+  "model_confidence": "low",
+  "goal_native": "",
+  "goal_en": "",
+  "intro_native": "这是一台燃气锅炉，操作不当可能引起漏气或一氧化碳中毒。为了你的安全，这个操作我不能教。请不要自己动手，联系 Vexa 官方售后或房东。如果闻到煤气味，请开窗、离开房间，并拨打燃气紧急电话（英国：0800 111 999）。",
+  "intro_en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999).",
+  "buttons": [],
+  "steps": [],
+  "tips": [],
+  "warnings": [
+    {
+      "native": "这是一台燃气锅炉，操作不当可能引起漏气或一氧化碳中毒。为了你的安全，这个操作我不能教。请不要自己动手，联系 Vexa 官方售后或房东。如果闻到煤气味，请开窗、离开房间，并拨打燃气紧急电话（英国：0800 111 999）。",
+      "en": "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning. For your safety, I can't walk you through this. Please don't try it yourself — contact Vexa official support or your landlord. If you smell gas, open the windows, leave the room and call the gas emergency line (in the UK: 0800 111 999)."
+    }
+  ],
+  "sources": [],
+  "closing_native": "",
+  "closing_en": ""
+}

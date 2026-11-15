@@ -1,0 +1,62 @@
+{
+  "budget_usd": 12.0,
+  "total_usd": 2.24,
+  "calls": [
+    {
+      "time": "2026-11-15T01:16:59",
+      "model": "fal-ai/kling-video/v2.1/standard/image-to-video",
+      "seconds": 5,
+      "est_usd": 0.28,
+      "guide_id": "2026-11-14T21-37-34-994Z-536fda",
+      "step": 1
+    },
+    {
+      "time": "2026-11-15T01:22:48",
+      "model": "fal-ai/kling-video/v2.1/standard/image-to-video",
+      "seconds": 5,
+      "est_usd": 0.28,
+      "guide_id": "2026-11-15T01-20-02-074Z-75aecb",
+      "step": 1
+    },
+    {
+      "time": "2026-11-15T01:24:32",
+      "model": "fal-ai/kling-video/v2.1/standard/image-to-video",
+      "seconds": 5,
+      "est_usd": 0.28,
+      "guide_id": "2026-11-15T01-20-02-074Z-75aecb",
+      "step": 2
+    },
+    {
+      "time": "2026-11-15T01:26:42",
+      "model": "fal-ai/kling-video/v2.1/standard/image-to-video",
+      "seconds": 10,
+      "est_usd": 0.56,
+      "guide_id": "2026-11-15T01-20-02-074Z-75aecb",
+      "step": 3
+    },
+    {
+      "time": "2026-11-15T01:29:01",
+      "model": "fal-ai/kling-video/v2.1/standard/image-to-video",
+      "seconds": 5,
+      "est_usd": 0.28,
+      "guide_id": "2026-11-15T01-20-02-074Z-75aecb",
+      "step": 4
+    },
+    {
+      "time": "2026-11-15T01:30:52",
+      "model": "fal-ai/kling-video/v2.1/standard/image-to-video",
+      "seconds": 5,
+      "est_usd": 0.28,
+      "guide_id": "2026-11-15T01-20-02-074Z-75aecb",
+      "step": 5
+    },
+    {
+      "time": "2026-11-15T01:32:42",
+      "model": "fal-ai/kling-video/v2.1/standard/image-to-video",
+      "seconds": 5,
+      "est_usd": 0.28,
+      "guide_id": "2026-11-15T01-20-02-074Z-75aecb",
+      "step": 6
+    }
+  ]
+}

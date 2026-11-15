@@ -62,17 +62,30 @@ const BOX = {
 const pick = (lang) => (lang === "zh" ? T.zh : T.en);
 
 // 示例：燃气锅炉面板（public/demo-boiler.svg）—— 演示安全红线，不生成任何步骤
+const GAS = {
+  zh: ["燃气锅炉", "这是一台燃气锅炉，操作不当可能引起漏气或一氧化碳中毒。"],
+  en: ["Gas boiler", "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning."],
+  es: ["Caldera de gas", "Esto es una caldera de gas; un error puede provocar una fuga de gas o una intoxicación por monóxido de carbono."],
+  vi: ["Nồi hơi gas", "Đây là nồi hơi dùng gas; thao tác sai có thể gây rò rỉ gas hoặc ngộ độc khí CO."],
+  ja: ["ガスボイラー", "これはガスボイラーです。操作を誤るとガス漏れや一酸化炭素中毒のおそれがあります。"],
+  ko: ["가스보일러", "이것은 가스보일러입니다. 잘못 조작하면 가스 누출이나 일산화탄소 중독이 일어날 수 있습니다."],
+  fr: ["Chaudière à gaz", "C'est une chaudière à gaz ; une erreur peut provoquer une fuite de gaz ou une intoxication au monoxyde de carbone."],
+  ar: ["غلاية غاز", "هذه غلاية تعمل بالغاز، وأي خطأ قد يسبب تسرب الغاز أو التسمم بأول أكسيد الكربون."],
+  hi: ["गैस बॉयलर", "यह गैस बॉयलर है; ग़लती से गैस रिसाव या कार्बन मोनोऑक्साइड विषाक्तता हो सकती है।"],
+  pt: ["Caldeira a gás", "Esta é uma caldeira a gás; um erro pode causar vazamento de gás ou intoxicação por monóxido de carbono."],
+};
+
 export function DEMO_DANGER_GUIDE(lang) {
-  const zh = lang === "zh";
+  const [name, reason] = GAS[lang] || GAS.en;
   return {
     demoImage: "/demo-boiler.svg",
     ...blockedGuide({
       langCode: lang,
-      appliance_native: zh ? "燃气锅炉" : "Gas boiler",
+      appliance_native: name,
       appliance_en: "Gas boiler",
       brand: "Vexa (demo)",
       kind: "gas",
-      reason_native: zh ? "这是一台燃气锅炉，操作不当可能引起漏气或一氧化碳中毒。" : "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning.",
+      reason_native: reason,
       reason_en: "This is a gas boiler; a mistake can cause a gas leak or carbon monoxide poisoning.",
     }),
   };

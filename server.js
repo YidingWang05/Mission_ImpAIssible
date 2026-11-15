@@ -21,6 +21,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { LANGUAGES } from "./languages.js";
+import { keysFor, withKey, fetchWithKey, isKeyError } from "./keys.js";
+import { localizeGuide } from "./localize.js";
+import { detectLang } from "./detect.js";
 import { PERSONA, greetPrompt, lessonPrompt, LESSON_TOOLS } from "./persona.js";
 import { DEMO_GUIDE, DEMO_DANGER_GUIDE } from "./demo.js";
 import { TriageSchema, TRIAGE_SYSTEM, blockedGuide, classifyDanger, dangerReply } from "./safety.js";
@@ -31,19 +34,49 @@ const GUIDE_DIR = path.join(here, "output", "guides");
 const MEDIA_DIR = path.join(here, "output", "media");
 await fs.mkdir(GUIDE_DIR, { recursive: true });
 await fs.mkdir(MEDIA_DIR, { recursive: true });
+const PHOTO_DIR = path.join(here, "output", "photos");
+await fs.mkdir(PHOTO_DIR, { recursive: true });
 
 const app = express();
 app.use(express.json({ limit: "15mb" }));
 app.use(express.static(path.join(here, "public")));
+app.use("/media", express.static(MEDIA_DIR));
 app.get("/vendor/anam.js", (_req, res) =>
   res.sendFile(path.join(here, "node_modules/@anam-ai/js-sdk/dist/umd/anam.js")),
 );
 
 const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 const ASK_MODEL = process.env.CLAUDE_ASK_MODEL || MODEL; // 问答用的模型，默认和识别相同
-const HAS_CLAUDE = Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
-const HAS_ANAM = Boolean(process.env.ANAM_API_KEY);
-const claude = HAS_CLAUDE ? new Anthropic() : null;
+// 每个服务可以配多个密钥（NAME、NAME_2、NAME_3 …）：额度不足 / 鉴权失败时自动换下一个，见 keys.js
+const CLAUDE_KEYS = keysFor("ANTHROPIC_API_KEY");
+const HAS_CLAUDE = CLAUDE_KEYS.length > 0 || Boolean(process.env.ANTHROPIC_AUTH_TOKEN);
+const HAS_ANAM = keysFor("ANAM_API_KEY").length > 0;
+
+// Claude 客户端：每个密钥一个，按需创建。所有调用都经过 callClaude，所以换密钥对下面的代码是透明的。
+const clients = new Map();
+const clientFor = (key) => clients.get(key) || clients.set(key, new Anthropic({ apiKey: key })).get(key);
+const callClaude = (fn) => (CLAUDE_KEYS.length ? withKey("ANTHROPIC_API_KEY", (key) => fn(clientFor(key))) : fn(new Anthropic()));
+const claude = HAS_CLAUDE && {
+  beta: {
+    messages: {
+      parse: (params) => callClaude((c) => c.beta.messages.parse(params)),
+      create: (params) => callClaude((c) => c.beta.messages.create(params)),
+      // 流式：换密钥重试时要把监听器重新挂到新的流上
+      stream: (params) => {
+        const listeners = [];
+        return {
+          on(event, cb) { listeners.push([event, cb]); return this; },
+          finalMessage: () =>
+            callClaude((c) => {
+              const s = c.beta.messages.stream(params);
+              for (const [event, cb] of listeners) s.on(event, cb);
+              return s.finalMessage();
+            }),
+        };
+      },
+    },
+  },
+};
 const FALLBACK = { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" };
 
 const langOf = (code) => LANGUAGES.find((l) => l.code === code) || LANGUAGES[0];
@@ -53,6 +86,7 @@ app.get("/api/config", (_req, res) => {
     persona: { name: PERSONA.name, image: PERSONA.image, avatarId: PERSONA.avatarId, voiceId: PERSONA.voiceId, llmId: PERSONA.llmId },
     languages: LANGUAGES.map(({ code, name, english, greeting, ui, rtl }) => ({ code, name, english, greeting, ui, rtl: !!rtl })),
     demo: { claude: !HAS_CLAUDE, avatar: !HAS_ANAM },
+    stt: keysFor("ELEVENLABS_API_KEY").length > 0, // 有 ElevenLabs 密钥：语音识别走 /api/stt（自动识别语言）
     // 数字人会话：Anam 每个会话有时长上限（Free 套餐 3 分钟）。前端按“段”续会话，说完就断开待机。
     session: {
       limitSeconds: Number(process.env.ANAM_SESSION_LIMIT_SECONDS ?? 180), // 0 = 不限制，不主动续会话
@@ -143,14 +177,28 @@ app.post("/api/analyze", async (req, res) => {
   const send = (obj) => res.write(JSON.stringify(obj) + "\n");
 
   try {
-    if (!HAS_CLAUDE) {
+    // 红线示例（燃气锅炉）：有没有密钥都能演示
+    if (sample === "boiler") { send({ type: "status", stage: "safety" }); return await finish(send, res, { ...DEMO_DANGER_GUIDE(lang.code), demo: true }, lang); }
+    const demoGuide = sample === "microwave" ? await loadGuide(DEMO_MICROWAVE) : null;
+    if (!HAS_CLAUDE && !demoGuide) {
       send({ type: "status", stage: "safety" });
       if (sample === "boiler") return await finish(send, res, { ...DEMO_DANGER_GUIDE(lang.code), demo: true }, lang);
       send({ type: "status", stage: "research" });
       send({ type: "search", query: "AQUA AW-7G 取扱説明書 (demo)" });
       return await finish(send, res, { ...DEMO_GUIDE(lang.code), demo: true }, lang);
     }
-    if (!image) throw new Error("缺少照片");
+    // 预生成好的演示：微波炉（真实识别结果 + 已缓存的视频和旁白），台上直接读缓存，不再调用模型
+    if (sample === "microwave") {
+      if (!demoGuide) throw new Error("demo guide missing: run the analyze step once or set DEMO_GUIDE_ID");
+      send({ type: "status", stage: "safety" });
+      send({ type: "status", stage: "research" });
+      // 示例是用某一种语言提前生成的：用户选了别的语言就换成那种语言（每种语言只翻译一次，之后读缓存）
+      const g = await inLanguage(demoGuide, lang);
+      for (const q of ["IKEA TILLREDA microwave manual", "TILLREDA 微波炉 使用说明"]) { send({ type: "search", tool: "web_search", query: q }); await new Promise((r) => setTimeout(r, 900)); }
+      send({ type: "result", guideId: g.id, file: `/guides/${g.id}.json`, guide: { ...g, demoImage: "/demo-microwave.jpg", demo: true } });
+      return res.end();
+    }
+    if (!image) throw coded("no_photo", "缺少照片");
     const imageBlock = { type: "image", source: { type: "base64", media_type: mediaType, data: image } };
 
     // ---- 阶段 0：安全红线（最先做，越线就不再检索、不生成教程）----
@@ -186,14 +234,58 @@ app.post("/api/analyze", async (req, res) => {
         },
       ],
     });
-    if (msg.stop_reason === "refusal" || !msg.parsed_output) throw new Error("这张照片无法分析，请换一张试试");
-    await finish(send, res, toGuideFile(msg.parsed_output, sources), lang);
+    if (msg.stop_reason === "refusal" || !msg.parsed_output) throw coded("unreadable", "这张照片无法分析，请换一张试试");
+    await finish(send, res, toGuideFile(msg.parsed_output, sources), lang, image);
   } catch (e) {
     console.error("analyze", e);
-    send({ type: "error", error: e?.message || "识别失败，请稍后再试" });
+    // code 给前端用（按用户的语言显示）；error 是给开发者看的原始信息
+    send({ type: "error", code: e?.code || "failed", error: e?.message || "识别失败，请稍后再试" });
     res.end();
   }
 });
+
+const coded = (code, message) => Object.assign(new Error(message), { code });
+
+// 把一份已有的说明换成用户选的语言。结果存成一份新的说明（编号 = 原编号-语言），
+// media_id 指回原来那份，所以视频不用重新生成；旁白按新语言的文字另外合成并缓存。
+const TranslationSchema = z.object({ translations: z.array(z.string()) });
+async function translateTexts(texts, lang) {
+  if (!HAS_CLAUDE) return null;
+  const msg = await claude.beta.messages.parse({
+    model: MODEL,
+    max_tokens: 16000,
+    ...FALLBACK,
+    output_config: { effort: "low", format: betaZodOutputFormat(TranslationSchema) },
+    system:
+      "You translate the lines of an appliance lesson, spoken by a friendly teacher to a non-technical user. " +
+      "Translate every numbered English line into the target language: plain words, short sentences. " +
+      "Words printed on the appliance itself (labels such as Max, Defrost, 800W) and brand or model names stay exactly as written. " +
+      "Return exactly one translation per line, in the same order.",
+    messages: [{ role: "user", content: `Target language: ${lang.english} (${lang.name}, ${lang.code}).\n\n` + texts.map((t, i) => `${i + 1}. ${t}`).join("\n") }],
+  });
+  return msg.stop_reason === "refusal" ? null : msg.parsed_output?.translations?.map((t) => t.replace(/^\d+\.\s*/, "")) || null;
+}
+async function inLanguage(guide, lang) {
+  if (guide.language?.code === lang.code || guide.safety === "blocked") return guide;
+  const base = guide.media_id || guide.id;
+  // 已经是翻译出来的版本：回到原始那份再翻，原始语言直接用原文
+  if (base !== guide.id) guide = (await loadGuide(base)) || guide;
+  if (guide.language?.code === lang.code) return guide;
+  // 翻译失败（没有密钥 / 模型出错）就退回英文版，英文版不需要调用模型
+  for (const target of lang.code === "en" ? [lang] : [lang, langOf("en")]) {
+    const id = `${base}-${target.code}`;
+    const cached = await loadGuide(id);
+    if (cached) return cached;
+    let g = null;
+    try { g = await localizeGuide(guide, target, translateTexts); } catch (e) { console.error("localize", target.code, e?.message || e); }
+    if (!g) continue;
+    Object.assign(g, { id, tutorial_id: id, media_id: base, generated_at: new Date().toISOString() });
+    await fs.writeFile(path.join(GUIDE_DIR, `${id}.json`), JSON.stringify(g, null, 2));
+    guides.set(id, g);
+    return g;
+  }
+  return guide;
+}
 
 // 看照片判断设备本身是否越过红线。越线返回“被拦截的完整说明”，否则返回 null。
 // 判断不了（模型拒答 / 没有结构化结果）时不放行。
@@ -208,7 +300,7 @@ async function triage(imageBlock, lang) {
       { role: "user", content: [imageBlock, { type: "text", text: `User's native language: ${lang.english} (${lang.name}, ${lang.code}). Classify this photo.` }] },
     ],
   });
-  if (msg.stop_reason === "refusal" || !msg.parsed_output) throw new Error("这张照片无法分析，请换一张试试");
+  if (msg.stop_reason === "refusal" || !msg.parsed_output) throw coded("unreadable", "这张照片无法分析，请换一张试试");
   const t = msg.parsed_output;
   if (t.hazard === "none") return null;
   return blockedGuide({ langCode: lang.code, appliance_native: t.appliance_native, appliance_en: t.appliance_en, brand: t.brand, kind: t.hazard, reason_native: t.reason_native, reason_en: t.reason_en });
@@ -291,7 +383,7 @@ function toGuideFile(g, sources) {
 
 // 保存为 JSON 文件并把结果发给前端
 const guides = new Map(); // id → 步骤 JSON（讲解阶段的数字人会话从这里取，不信任前端传来的内容）
-async function finish(send, res, guide, lang) {
+async function finish(send, res, guide, lang, image) {
   const id = `${new Date().toISOString().replace(/[:.]/g, "-")}-${crypto.randomBytes(3).toString("hex")}`;
   const { demoImage, demo, ...content } = guide;
   const file = {
@@ -305,6 +397,8 @@ async function finish(send, res, guide, lang) {
   };
   await fs.writeFile(path.join(GUIDE_DIR, `${id}.json`), JSON.stringify(file, null, 2));
   guides.set(id, file);
+  // 照片只发给模型一次；这里存一份给视频工厂用（之后都靠 tutorial_id）
+  if (image) await fs.writeFile(path.join(PHOTO_DIR, `${id}.jpg`), Buffer.from(image, "base64")).catch(() => {});
   send({ type: "result", guideId: id, file: `/guides/${id}.json`, guide: { ...file, demoImage, demo } });
   res.end();
 }
@@ -355,19 +449,23 @@ app.post("/api/session-token", async (req, res) => {
     // quiet：待机后重新连上（或从讲解页返回），不再重复说一遍问候语
     personaConfig = quiet
       ? { ...base, systemPrompt: greetPrompt(lang), skipGreeting: true }
-      : { ...base, systemPrompt: greetPrompt(lang), initialMessage: lang.greeting, uninterruptibleGreeting: true };
+      : { ...base, systemPrompt: greetPrompt(lang), initialMessage: lang.greeting, uninterruptibleGreeting: false }; // 用户可以随时让她停下
   }
   try {
-    const r = await fetch("https://api.anam.ai/v1/auth/session-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.ANAM_API_KEY}` },
-      body: JSON.stringify({ maxSessions: 3, personaConfig }),
-    });
+    // 这个 Anam 账户额度用完 / 密钥失效时，自动换 ANAM_API_KEY_2、_3 …
+    const r = await fetchWithKey("ANAM_API_KEY", (key) =>
+      fetch("https://api.anam.ai/v1/auth/session-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ maxSessions: 3, personaConfig }),
+      }),
+    );
     const data = await r.json();
     if (!r.ok) return res.status(r.status).json({ error: data?.message || "Anam 令牌申请失败" });
     res.json({ sessionToken: data.sessionToken });
   } catch (e) {
-    console.error("session-token", e);
+    console.error("session-token", e?.message || e);
+    if (isKeyError(e)) return res.status(429).json({ error: "所有 Anam 密钥的额度都用完了或已失效" });
     res.status(500).json({ error: "无法连接 Anam" });
   }
 });
@@ -399,18 +497,216 @@ app.post("/api/translate", async (req, res) => {
 
 // 步骤时间标记。C 的视频工厂写出 output/media/<id>.json（README 7.2 的清单）后直接用真实时间；
 // 在那之前按讲解词长度估算，播放器照样能画步骤标记、跳转、重播，不需要重新渲染。
-async function manifestOf(guide) {
-  try {
-    return JSON.parse(await fs.readFile(path.join(MEDIA_DIR, `${guide.id}.json`), "utf8"));
-  } catch {
-    return { tutorial_id: guide.id, status: "done", video_url: null, estimated: true, chapters: chapters(guide), clips: [] };
+// 视频工厂：后台跑 generate_action_videos.py（按 1→2→3 顺序，fal 结果全部缓存，已生成的步骤直接跳过）
+const RENDER_MODEL = process.env.RENDER_MODEL || "kling21";
+const RENDER_IDLE_MS = Number(process.env.RENDER_IDLE_MS) || 90_000; // 前端这么久没来轮询就停止生成
+const jobs = new Map(); // id → { proc, lastPoll, status, error }
+
+async function photoOf(id) {
+  for (const p of [path.join(PHOTO_DIR, `${id}.jpg`), DEMO_PHOTOS[id]].filter(Boolean)) {
+    try { await fs.access(p); return p; } catch {}
   }
+  return null;
 }
+// 仓库里那份微波炉说明配的照片
+const DEMO_MICROWAVE = process.env.DEMO_GUIDE_ID || "2026-11-15T01-20-02-074Z-75aecb";
+const DEMO_PHOTOS = { [DEMO_MICROWAVE]: path.join(here, "samples", "microwave.jpg") };
+
+// 找一个装了 Pillow + requests 的 Python（PATH 里第一个 python 不一定是对的）
+let pythonCmd;
+async function pickPython() {
+  if (pythonCmd !== undefined) return pythonCmd;
+  const { spawnSync } = await import("node:child_process");
+  const cands = [process.env.PYTHON, "python", "py -3", "python3", "C:/Python313/python.exe"].filter(Boolean).map((c) => c.split(" "));
+  pythonCmd = cands.find((c) => spawnSync(c[0], [...c.slice(1), "-c", "import PIL, requests"], { timeout: 20000 }).status === 0) || null;
+  console.log("render python:", pythonCmd?.join(" "));
+  return pythonCmd;
+}
+
+const mediaId = (guide) => guide.media_id || guide.id; // 翻译出来的说明共用原说明的视频
+async function startRender(guide) {
+  const id = mediaId(guide);
+  const job = jobs.get(id);
+  if (job?.proc) { job.lastPoll = Date.now(); return job; }
+  const photo = await photoOf(id);
+  if (!photo || guide.safety === "blocked" || !guide.steps?.length) return null;
+  const out = path.join(MEDIA_DIR, id);
+  const prev = await scriptManifest(id);
+  if (prev && prev.steps.length >= guide.steps.length) { const j = { status: "done", lastPoll: Date.now() }; jobs.set(id, j); return j; }
+  const { spawn } = await import("node:child_process");
+  const py = await pickPython();
+  if (!py) { console.error("render: no python with Pillow + requests found (set PYTHON=...)"); return null; }
+  const proc = spawn(py[0], [...py.slice(1), "generate_action_videos.py", "--guide", path.join(GUIDE_DIR, `${id}.json`), "--photo", photo, "--out", out, "--model", RENDER_MODEL],
+    { cwd: here, env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
+  const j = { proc, lastPoll: Date.now(), status: "rendering", error: null };
+  let tail = "";
+  proc.stdout.on("data", (d) => process.stdout.write(`[render ${id.slice(-6)}] ${d}`));
+  proc.stderr.on("data", (d) => { tail = (tail + d).slice(-2000); });
+  proc.on("exit", (code) => {
+    j.proc = null;
+    if (j.status === "stopped") return;
+    j.status = code === 0 ? "done" : "stopped";
+    if (code !== 0) {
+      j.error = /fal budget/.test(tail) ? "fal_budget" : /keys are unusable/.test(tail) ? "fal_keys" : "render_failed";
+      console.error(`render ${id} exit ${code}: ${tail.split("\n").filter(Boolean).slice(-2).join(" | ")}`);
+    }
+  });
+  jobs.set(id, j);
+  return j;
+}
+
+setInterval(() => {
+  for (const [id, j] of jobs) if (j.proc && Date.now() - j.lastPoll > RENDER_IDLE_MS) {
+    console.log(`render ${id}: no polling for ${RENDER_IDLE_MS / 1000}s, stopping`);
+    j.status = "stopped";
+    j.proc.kill();
+  }
+}, 10_000).unref();
+
+async function scriptManifest(id) {
+  try { return JSON.parse(await fs.readFile(path.join(MEDIA_DIR, id, "manifest.json"), "utf8")); } catch { return null; }
+}
+
+// 把脚本的 manifest.json 转成 README 7.2 的清单；没有视频时按讲解词长度估算时间（mode: "estimated"）
+async function manifestOf(guide) {
+  const mid = mediaId(guide);
+  const m = await scriptManifest(mid);
+  const job = jobs.get(mid);
+  if (!m && !job) return { tutorial_id: guide.id, status: "done", video_url: null, estimated: true, chapters: chapters(guide), clips: [] };
+  const byStep = new Map((m?.steps || []).map((s) => [s.step, s]));
+  let at = 0;
+  const chs = [], clips = [];
+  const est = chapters(guide);
+  for (const s of guide.steps) {
+    const v = byStep.get(s.step);
+    if (v) {
+      chs.push({ step: s.step, start: +at.toFixed(2), end: +(at + v.duration_s).toFixed(2), ready: true });
+      clips.push({ step: s.step, url: `/media/${mid}/${v.file}`, duration: v.duration_s });
+      at += v.duration_s;
+    } else {
+      const e = est[s.step - 1];
+      chs.push({ step: s.step, ready: false, est_seconds: +(e.end - e.start).toFixed(1) });
+    }
+  }
+  const all = clips.length === guide.steps.length;
+  const status = all ? "done" : job?.status || "stopped";
+  return { tutorial_id: guide.id, status, video_url: all && m?.all_steps ? `/media/${mid}/${m.all_steps}` : null,
+    chapters: chs, clips, mode: "video", ...(job?.error ? { error: job.error } : {}) };
+}
+
+app.post("/api/render", async (req, res) => {
+  const guide = await loadGuide(req.body?.tutorial_id || req.body?.guideId);
+  if (!guide) return res.status(404).json({ error: "找不到这份步骤" });
+  await startRender(guide); // priority_steps 收下但不插队（视频按 1→2→3 顺序生成）
+  res.json(await manifestOf(guide));
+});
 
 app.get("/api/render/:id", async (req, res) => {
   const guide = await loadGuide(req.params.id);
   if (!guide) return res.status(404).json({ error: "找不到这份步骤" });
+  const j = jobs.get(mediaId(guide));
+  if (j) j.lastPoll = Date.now();
   res.json(await manifestOf(guide));
+});
+
+// ElevenLabs 多语言旁白（Anam 不可用时讲解照样有声音；备用演示视频也用它）。
+// 同一句话只合成一次：output/media/tts/<sha1(voice+model+text)>.mp3
+const TTS_DIR = path.join(MEDIA_DIR, "tts");
+await fs.mkdir(TTS_DIR, { recursive: true });
+const TTS_VOICE = process.env.ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL" // premade "Sarah"（免费档不能用库里的声音）;
+const TTS_MODEL = process.env.ELEVENLABS_MODEL || "eleven_multilingual_v2";
+const ttsInflight = new Map();
+async function synth(text) {
+  const h = crypto.createHash("sha1").update(`${TTS_VOICE}|${TTS_MODEL}|${text}`).digest("hex").slice(0, 20);
+  const file = path.join(TTS_DIR, `${h}.mp3`);
+  try { await fs.access(file); return file; } catch {}
+  if (ttsInflight.has(h)) return ttsInflight.get(h);
+  const p = (async () => {
+    const r = await fetchWithKey("ELEVENLABS_API_KEY", (key) =>
+      fetch(`https://api.elevenlabs.io/v1/text-to-speech/${TTS_VOICE}?output_format=mp3_44100_128`, {
+        method: "POST",
+        headers: { "xi-api-key": key, "Content-Type": "application/json" },
+        body: JSON.stringify({ text, model_id: TTS_MODEL }),
+      }));
+    if (!r.ok) throw new Error(`elevenlabs ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    await fs.writeFile(file, Buffer.from(await r.arrayBuffer()));
+    return file;
+  })().finally(() => ttsInflight.delete(h));
+  ttsInflight.set(h, p);
+  return p;
+}
+const HAS_TTS = keysFor("ELEVENLABS_API_KEY").length > 0;
+async function sendTts(res, text) {
+  if (!text) return res.status(400).json({ error: "empty" });
+  if (!HAS_TTS) return res.status(503).json({ error: "no ElevenLabs key" });
+  try { res.type("audio/mpeg").sendFile(await synth(text.slice(0, 1500))); }
+  catch (e) { console.error("tts", e.message); res.status(502).json({ error: "tts failed" }); }
+}
+// 任意一句话（Ava 的回答、打招呼）
+app.get("/api/tts", (req, res) => sendTts(res, String(req.query.text || "").trim()));
+// 每一步旁白：缓存键 = 说明编号 + 步骤 + 语言（lang=en 用 narration_en，否则 narration_native）
+app.get("/api/narration/:id/:step", async (req, res) => {
+  const g = await loadGuide(req.params.id);
+  const s = g?.steps?.find((x) => x.step === Number(req.params.step));
+  if (!s) return res.status(404).json({ error: "not found" });
+  const en = req.query.lang === "en";
+  sendTts(res, en ? s.narration_en : s.narration_native);
+});
+
+// 语音识别：浏览器录下用户说的一句话（16 kHz WAV）发到这里，用 ElevenLabs Scribe 转成文字。
+// Scribe 会自己判断语言，所以用户不用先选对语言；返回 { text, language }（language 只在有把握时给出）。
+// hint = 当前对话的语言：句子太短、语言没把握时，按这个语言再识别一次，避免把“下一步”听成别的语言。
+const STT_MODEL = process.env.ELEVENLABS_STT_MODEL || "scribe_v1";
+const STT_LANG = { eng: "en", zho: "zh", cmn: "zh", yue: "zh", spa: "es", vie: "vi", jpn: "ja", kor: "ko", fra: "fr", ara: "ar", hin: "hi", por: "pt" };
+const STT_CODE = { en: "eng", zh: "zho", es: "spa", vi: "vie", ja: "jpn", ko: "kor", fr: "fra", ar: "ara", hi: "hin", pt: "por" };
+async function transcribe(audio, type, languageCode) {
+  const r = await fetchWithKey("ELEVENLABS_API_KEY", (key) => {
+    const fd = new FormData();
+    fd.append("model_id", STT_MODEL);
+    fd.append("tag_audio_events", "false");
+    if (languageCode) fd.append("language_code", languageCode);
+    fd.append("file", new Blob([audio], { type }), "speech.wav");
+    return fetch("https://api.elevenlabs.io/v1/speech-to-text", { method: "POST", headers: { "xi-api-key": key }, body: fd });
+  });
+  if (!r.ok) throw new Error(`elevenlabs stt ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  return r.json();
+}
+app.post("/api/stt", express.raw({ type: () => true, limit: "8mb" }), async (req, res) => {
+  if (!keysFor("ELEVENLABS_API_KEY").length) return res.status(503).json({ error: "no ElevenLabs key" });
+  const audio = req.body;
+  if (!Buffer.isBuffer(audio) || audio.length < 4000) return res.json({ text: "", language: null });
+  const type = req.headers["content-type"] || "audio/wav";
+  const hint = STT_CODE[String(req.query.hint || "")];
+  const clean = (t) => String(t || "").replace(/\([^)]*\)|\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim(); // 去掉 (笑声) 这类标注
+  try {
+    // partial=1：用户还在说，只要一个尽快的中间结果给页面显示，不做第二次识别，也不判断语言
+    if (req.query.partial) return res.json({ text: clean((await transcribe(audio, type)).text), language: null });
+    let out = await transcribe(audio, type);
+    let language = STT_LANG[out.language_code] || null;
+    const sure = language && (out.language_probability ?? 0) >= 0.6;
+    if (!sure) {
+      language = null;
+      if (hint && out.language_code !== hint) out = await transcribe(audio, type, hint);
+    }
+    const text = clean(out.text);
+    // 文字本身的写法比声音更可靠（只有汉字的短句常被听成日文）；太短的一句话不足以判断，不换语言
+    const script = detectLang(text);
+    if (["zh", "ja", "ko", "ar", "hi"].includes(script)) language = language && script;
+    const long = /[぀-ヿ一-鿿가-힯]/.test(text) ? text.length >= 6 : text.split(/\s+/).length >= 3;
+    res.json({ text, language: long ? language : null });
+  } catch (e) {
+    console.error("stt", e?.message || e);
+    res.status(502).json({ error: "stt failed" });
+  }
+});
+
+// 讲解中途换语言（用户改用另一种语言提问）：返回同一份说明的那种语言版本，视频共用
+app.post("/api/localize", async (req, res) => {
+  const guide = await loadGuide(req.body?.tutorial_id);
+  const lang = LANGUAGES.find((l) => l.code === req.body?.lang);
+  if (!guide || !lang) return res.status(404).json({ error: "not found" });
+  try { res.json(await inLanguage(guide, lang)); }
+  catch (e) { console.error("localize", e?.message || e); res.status(500).json({ error: "failed" }); }
 });
 
 // 问答：只收 tutorial_id，不收照片、不收完整说明
@@ -422,7 +718,12 @@ app.post("/api/ask", async (req, res) => {
   const question = String(b.question || "").trim().slice(0, 500);
   const current = Math.max(1, Math.min(Number(b.current_step) || 1, Math.max(guide.steps.length, 1)));
   const marks = (await manifestOf(guide)).chapters;
-  const done = (raw) => res.json(normalizeAsk(raw, guide, current, lang.code, marks));
+  // 自动语言检测：回答用“用户这句话的语言”，认不出来就沿用当前的语言（lang）。
+  // reply_language 是新增字段：前端据此切换 Ava 的声音和字幕；界面文字不跟着变。
+  const supported = (code) => LANGUAGES.find((l) => l.code === String(code || "").toLowerCase().slice(0, 2));
+  // heard_language：语音识别听出来的语言（文字太短时比看文字更可靠）
+  const local = supported(b.heard_language) || supported(detectLang(question)) || lang;
+  const done = (raw, reply = local) => res.json({ ...normalizeAsk(raw, guide, current, reply.code, marks), reply_language: reply.code });
   const blank = { answer_native: "", answer_en: "", button_id: null, play_from: null, play_to: null };
 
   // ① 红线：设备本身被拦截，或者问题本身危险 → 不交给模型，直接给固定的安全话术
@@ -431,7 +732,7 @@ app.post("/api/ask", async (req, res) => {
   if (kind) return done({ ...blank, intent: "danger", danger_kind: kind });
 
   // ② 没有 Claude（演示模式）：本地规则
-  if (!HAS_CLAUDE) return done(heuristicAsk(question, guide, current, lang.code));
+  if (!HAS_CLAUDE) return done(heuristicAsk(question, guide, current, local.code));
 
   // ③ Claude 判断问题类型。只发精简目录 + 当前步骤 + 问题
   try {
@@ -445,7 +746,8 @@ app.post("/api/ask", async (req, res) => {
         {
           role: "user",
           content:
-            `User's native language: ${lang.english} (${lang.name}, ${lang.code}).\n` +
+            `Conversation language: ${lang.english} (${lang.name}, ${lang.code}).\n` +
+            `Supported languages: ${LANGUAGES.map((l) => `${l.code} = ${l.english}`).join(", ")}.\n` +
             `CATALOG:\n${JSON.stringify(catalog(guide))}\n` +
             `Current step: ${current}\n` +
             `QUESTION: ${question}`,
@@ -453,10 +755,10 @@ app.post("/api/ask", async (req, res) => {
       ],
     });
     if (msg.stop_reason === "refusal" || !msg.parsed_output) return done({ ...blank, intent: "danger" });
-    done(msg.parsed_output);
+    done(msg.parsed_output, supported(msg.parsed_output.question_language) || lang);
   } catch (e) {
     console.error("ask", e);
-    done(heuristicAsk(question, guide, current, lang.code));
+    done(heuristicAsk(question, guide, current, local.code));
   }
 });
 

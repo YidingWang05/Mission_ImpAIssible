@@ -1,0 +1,279 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-14T20-51-00-692Z-83c608",
+  "tutorial_id": "2026-11-14T20-51-00-692Z-83c608",
+  "generated_at": "2026-11-14T20:51:00.692Z",
+  "language": {
+    "code": "zh",
+    "name": "Chinese (Mandarin)"
+  },
+  "safety": "ok",
+  "recognized": true,
+  "appliance_native": "微波炉（台式，旋钮控制）",
+  "appliance_en": "Microwave oven (countertop, dial controls)",
+  "brand": "IKEA",
+  "model": "TILLREDA（白色，20升，可能是 604.933.58）",
+  "model_confidence": "medium",
+  "goal_native": "用微波炉加热食物",
+  "goal_en": "Heat food in the microwave",
+  "intro_native": "这台看起来是宜家 TILLREDA 白色微波炉，用两个旋钮操作。我们一起学怎么用它加热食物。",
+  "intro_en": "This looks like an IKEA TILLREDA white microwave, controlled by two dials. Let's learn how to heat food with it.",
+  "buttons": [
+    {
+      "id": "b1",
+      "panel_text": "解冻图标, Min – Med – Max",
+      "name_native": "火力旋钮",
+      "name_en": "Power dial",
+      "function_native": "选择加热火力，从最小（Min）到最大（Max），解冻图标处用于解冻。",
+      "function_en": "Sets the power level from Min to Max; the defrost symbol marks the defrost setting.",
+      "box": {
+        "x": 712,
+        "y": 474,
+        "w": 54,
+        "h": 58
+      }
+    },
+    {
+      "id": "b2",
+      "panel_text": "时钟图标, 0 1 2 3 4 5 … 20 30",
+      "name_native": "定时旋钮",
+      "name_en": "Timer dial",
+      "function_native": "设定加热时间，转离 0 就开始加热，转回 0 就停止。",
+      "function_en": "Sets the cooking time; turning it past 0 starts heating, back to 0 stops it.",
+      "box": {
+        "x": 703,
+        "y": 564,
+        "w": 48,
+        "h": 58
+      }
+    },
+    {
+      "id": "b3",
+      "panel_text": "圆形按钮（无标签）",
+      "name_native": "开门按钮",
+      "name_en": "Door release button",
+      "function_native": "按下打开微波炉门。",
+      "function_en": "Press to open the door.",
+      "box": {
+        "x": 697,
+        "y": 668,
+        "w": 54,
+        "h": 42
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "button_id": "b3",
+      "action_native": "按开门按钮",
+      "action_en": "Press the door button",
+      "narration_native": "先看右边面板最下面那个白色圆按钮。按一下，门就打开了。",
+      "narration_en": "Look at the round white button at the bottom of the right panel. Press it and the door opens.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 2,
+      "button_id": null,
+      "action_native": "放入食物并关门",
+      "action_en": "Put the food in and close the door",
+      "narration_native": "把食物放进能用微波炉的碗或盘子里。放在玻璃转盘的中间。然后把门关好。",
+      "narration_en": "Put the food in a microwave-safe dish. Place it in the middle of the glass turntable. Then close the door.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 3,
+      "button_id": "b1",
+      "action_native": "转动火力旋钮选火力",
+      "action_en": "Turn the power dial to choose the power",
+      "narration_native": "右边上面那个旋钮是火力。热剩饭剩菜、热牛奶，就转到最右边的 Max。解冻的话，转到有解冻小图标的位置。",
+      "narration_en": "The top dial on the right is the power. For reheating food or milk, turn it all the way to Max on the right. For defrosting, turn it to the defrost symbol.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 4,
+      "button_id": "b2",
+      "action_native": "转动定时旋钮设时间",
+      "action_en": "Turn the timer dial to set the time",
+      "narration_native": "中间那个带数字的旋钮是定时。转到你要的分钟数，微波炉就自动开始加热了。它没有开始键，不用找。",
+      "narration_en": "The middle dial with numbers is the timer. Turn it to the minutes you want and the microwave starts by itself. There is no start button.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 5,
+      "button_id": null,
+      "action_native": "等待“叮”声",
+      "action_en": "Wait for the ding",
+      "narration_native": "时间到了，微波炉会响一声“叮”，然后自己停下来。",
+      "narration_en": "When the time is up, the microwave makes a ding and stops by itself.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 6,
+      "button_id": "b2",
+      "action_native": "确认定时旋钮在 0",
+      "action_en": "Check the timer is at 0",
+      "narration_native": "拿食物之前，看一眼中间的定时旋钮，确认它指在 0。这样电源就是关的。",
+      "narration_en": "Before taking the food out, check the middle timer dial points at 0. That means the power is off.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    },
+    {
+      "step": 7,
+      "button_id": "b3",
+      "action_native": "按开门按钮取出食物",
+      "action_en": "Press the door button and take the food out",
+      "narration_native": "再按一下下面的圆按钮开门。小心，碗可能很烫，最好用隔热手套拿。",
+      "narration_en": "Press the round button at the bottom again to open the door. Careful, the dish may be hot, so use an oven glove.",
+      "sources": [
+        "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+        "https://manuals.plus/ikea/tillreda-microwave-oven-manual"
+      ]
+    }
+  ],
+  "tips": [
+    {
+      "native": "短时间加热（一两分钟内）旋钮不好调准，可以先稍微转过头，再往回转到想要的位置。",
+      "en": "Short times (under about 2 minutes) are hard to set; turn slightly past the time, then back."
+    },
+    {
+      "native": "这台只有 700 瓦，比大功率微波炉慢，按包装上的时间加热时可以多加一点时间。",
+      "en": "At 700 W it's slower than bigger microwaves, so add a little time compared with package instructions."
+    },
+    {
+      "native": "解冻时，中途把食物翻一翻或搅一搅，会更均匀。",
+      "en": "When defrosting, turn or stir the food halfway through for even results."
+    },
+    {
+      "native": "想中途停下，把定时旋钮转回 0 就行。不用时也要让它停在 0。",
+      "en": "To stop early, turn the timer back to 0. Always leave it at 0 when not in use."
+    }
+  ],
+  "warnings": [
+    {
+      "native": "不要放金属、锡纸或带金边的碗盘进去。",
+      "en": "Don't put metal, foil or metal-trimmed dishes inside."
+    },
+    {
+      "native": "不要空着开机，也不要加热密封容器或带壳的鸡蛋。",
+      "en": "Don't run it empty, and don't heat sealed containers or eggs in their shells."
+    },
+    {
+      "native": "加热的液体可能突然沸腾溢出，拿出前先放一会儿，再搅一搅。",
+      "en": "Heated liquids can boil over suddenly; let them stand and stir before drinking."
+    },
+    {
+      "native": "如果看到里面打火花，马上把定时转回 0 停止使用。不要自己拆开修理，请联系宜家官方客服或房东。",
+      "en": "If you see sparks, turn the timer to 0 and stop using it. Don't open or repair it yourself; contact IKEA official support or your landlord."
+    },
+    {
+      "native": "保持微波炉周围通风口畅通，上面和两侧留出空间。",
+      "en": "Keep the vents clear and leave space above and beside the oven."
+    }
+  ],
+  "closing_native": "就这么简单：选火力，定时间，等“叮”一声。用完记得把定时旋钮转回 0。祝你用餐愉快！",
+  "closing_en": "That's it: choose the power, set the time, wait for the ding. Remember to turn the timer back to 0 when done. Enjoy your meal!",
+  "sources": [
+    {
+      "id": 1,
+      "title": "IKEA TILLREDA MANUAL Pdf Download",
+      "url": "https://www.manualslib.com/manual/3010000/Ikea-Tillreda.html",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 2,
+      "title": "IKEA TILLREDA 204.933.60 Instructions Manual (Page 21 of 32)",
+      "url": "https://www.manualslib.com/manual/2111725/Ikea-Tillreda-204-933-60.html?page=21",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 3,
+      "title": "IKEA TILLREDA Microwave Oven - User Manual and Specifications",
+      "url": "https://manuals.plus/m/0930b38c42f5252292bf0843d3170c5360cf27bf1d281532c5c32da1315bc482",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 4,
+      "title": "IKEA TILLREDA 304.931.09 Microwave Oven User Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/tillreda-304-931-09-microwave-oven-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 5,
+      "title": "IKEA TILLREDA Microwave Oven User Manual - Manuals+",
+      "url": "https://manuals.plus/ikea/tillreda-microwave-oven-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 6,
+      "title": "TILLREDA Microwave Oven User Manual",
+      "url": "https://manuals.plus/m/1d336a5ac54101e2bdda44b44bbf998d2dd8f7423406cb5b1c8d7449670f2f0b",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 7,
+      "title": "IKEA TILLREDA Portable Induction Hob Instruction Manual",
+      "url": "https://manuals.plus/m/d64407ef82320add40d3e17380e277f659a2c2dc8aeac120f74fb3cfb32119ae",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 8,
+      "title": "IKEA Tillreda Portable induction hob Owner's Manual",
+      "url": "https://manuals.plus/m/7ff04dc73441f6128680d366961c36023cf0c7b9c9d7d70beb4fa03d45a59a7e",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 9,
+      "title": "Manuals+ Home › Ikea › IKEA TILLREDA User Manual IKEA TILLREDA User Manual",
+      "url": "https://manuals.plus/ikea/ikea-tillreda-manual.pdf",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 10,
+      "title": "IKEA TILLREDA Portable Induction Hob User Manual",
+      "url": "https://manuals.plus/m/7d8d8026d63dd0523a48cf7acfaa373342efce64dbf5d79786c7a8af60a66c77",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 11,
+      "title": "TILLREDA microwave oven, black - IKEA CA",
+      "url": "https://www.ikea.com/ca/en/p/tillreda-microwave-oven-black-10546477/",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 12,
+      "title": "TILLREDA microwave oven, white - IKEA",
+      "url": "https://www.ikea.com/us/en/p/tillreda-microwave-oven-white-40493420/",
+      "kind": "web",
+      "cited": false
+    }
+  ]
+}
