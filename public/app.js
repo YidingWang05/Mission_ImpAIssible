@@ -72,14 +72,6 @@ async function init() {
   poster.onerror = () => poster.classList.add("broken");
   poster.src = state.cfg.persona.image;
 
-  const d = state.cfg.demo;
-  if (d.claude || d.avatar) {
-    const parts = [];
-    if (d.avatar) parts.push("未配置 ANAM_API_KEY：Ava 用形象照 + 浏览器朗读");
-    if (d.claude) parts.push("未配置 ANTHROPIC_API_KEY：识别使用示例面板");
-    $("#demo-note").textContent = "演示模式 · " + parts.join("；");
-    $("#demo-note").hidden = false;
-  }
   // 示例按钮一直显示：微波炉（预生成好的视频 + 旁白，没有时服务器退回演示面板）、燃气锅炉（红线）
   $("#btn-sample").hidden = false;
   $("#btn-sample-danger").hidden = false;
@@ -124,6 +116,12 @@ function applyLang(code) {
   document.documentElement.dir = state.lang.rtl ? "rtl" : "ltr";
   document.querySelectorAll("[data-t]").forEach((el) => { if (ui[el.dataset.t]) el.textContent = ui[el.dataset.t]; });
   document.querySelectorAll("[data-ph]").forEach((el) => (el.placeholder = ui[el.dataset.ph] || ""));
+  // 图标按钮没有文字：把提示和读屏文字也换成这种语言
+  document.querySelectorAll("[data-tt]").forEach((el) => { el.title = ui[el.dataset.tt] || ""; el.setAttribute("aria-label", el.title); });
+  document.title = ui.appName;
+  const d = state.cfg.demo, note = $("#demo-note");
+  note.hidden = !(d.claude || d.avatar);
+  note.textContent = `${ui.demoMode} · ${[d.avatar && ui.demoAvatar, d.claude && ui.demoClaude].filter(Boolean).join(" · ")}`;
 }
 
 function show(id) {
@@ -312,7 +310,7 @@ async function analyze({ sample = false } = {}) {
       if (ev.type === "status" && ev.stage === "safety") logResearch(`🛡️ ${ui.checking}`);
       else if (ev.type === "search") logResearch(`🔎 ${ui.searching}: ${ev.query}`);
       else if (ev.type === "sources") ev.sources.slice(0, 5).forEach((s) => logResearch(`📄 ${s.title}`));
-      else if (ev.type === "error") throw new Error(ev.error);
+      else if (ev.type === "error") throw Object.assign(new Error(ev.error), { code: ev.code });
       else if (ev.type === "result") result = ev;
     }
     if (!result) throw new Error("no result");
@@ -321,7 +319,9 @@ async function analyze({ sample = false } = {}) {
     state.guideFile = result.file;
     await enterLesson(result.guide.demoImage || state.photo.dataUrl);
   } catch (e) {
-    $("#capture-error").textContent = e.message;
+    // 出错信息用用户选的语言显示；服务器的原始信息只进控制台
+    console.error("analyze", e);
+    $("#capture-error").textContent = ui[{ no_photo: "noPhoto", unreadable: "unreadable" }[e.code]] || ui.failed;
     $("#capture-error").hidden = false;
   } finally {
     btn.textContent = ui.analyze;

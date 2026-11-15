@@ -23,12 +23,12 @@
     <header class="brand"><span class="logo">◎</span> <span data-t="appName">家电小老师</span></header>
     <div class="hero" id="hero-slot"></div>
     <div class="persona-card">
-      <div><b>Ava</b> · Appliance Tutor</div>
+      <div><b>Ava</b> · <span data-t="tutor">Appliance Tutor</span></div>
       <div class="muted small">🗣️ Amanda – Warm Guide (EN) · 🧠 Qwen 3.8 27B · 🎭 Mia · cara-4</div>
     </div>
     <div class="card">
       <label class="field">
-        <span>🌐 母语 / Native language</span>
+        <span>🌐 <span data-t="langLabel">Native language</span></span>
         <select id="lang"></select>
       </label>
       <button id="btn-start" class="primary big" data-t="start">开始</button>
@@ -51,8 +51,8 @@
       </label>
       <textarea id="question" class="text" rows="2" data-ph="questionPh"></textarea>
       <button id="btn-analyze" class="primary big" data-t="analyze" disabled>开始讲解</button>
-      <button id="btn-sample" class="ghost" hidden>🍲 示例：微波炉 / Sample microwave</button>
-      <button id="btn-sample-danger" class="ghost" hidden>🔥 示例：燃气锅炉（安全红线） / Sample gas boiler</button>
+      <button id="btn-sample" class="ghost" hidden>🍲 <span data-t="sampleMicrowave">Sample: microwave</span></button>
+      <button id="btn-sample-danger" class="ghost" hidden>🔥 <span data-t="sampleBoiler">Sample: gas boiler</span></button>
       <div class="research" id="research" hidden>
         <p class="research-title"><span class="spinner"></span><span id="research-text"></span></p>
         <ul id="research-log"></ul>
@@ -65,10 +65,10 @@
   <section id="screen-lesson" class="screen">
     <div class="lesson">
       <div class="topbar">
-        <button class="icon" id="btn-back" title="重拍">←</button>
+        <button class="icon" id="btn-back" data-tt="retake">←</button>
         <div class="title"><b id="appliance-name"></b><span id="model-name"></span></div>
         <span class="progress" id="progress"></span>
-        <button class="icon rec" id="btn-rec" title="录制视频">●</button>
+        <button class="icon rec" id="btn-rec" data-tt="record">●</button>
       </div>
 
       <!-- “视频画面”：真实照片 + 按钮标注 + 数字人画中画 + 双语字幕 -->
@@ -112,7 +112,7 @@
         </div>
         <form id="ask-form" class="ask">
           <input id="ask" class="text" data-ph="askPh" autocomplete="off" />
-          <button class="icon send" aria-label="send">➤</button>
+          <button class="icon send" data-tt="send">➤</button>
         </form>
         <p class="muted small tap-tip" data-t="tapTip"></p>
         <details class="steps">

@@ -22,6 +22,7 @@ import { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { LANGUAGES } from "./languages.js";
 import { keysFor, withKey, fetchWithKey, isKeyError } from "./keys.js";
+import { localizeGuide } from "./localize.js";
 import { PERSONA, greetPrompt, lessonPrompt, LESSON_TOOLS } from "./persona.js";
 import { DEMO_GUIDE, DEMO_DANGER_GUIDE } from "./demo.js";
 import { TriageSchema, TRIAGE_SYSTEM, blockedGuide, classifyDanger, dangerReply } from "./safety.js";
@@ -186,15 +187,16 @@ app.post("/api/analyze", async (req, res) => {
     }
     // 预生成好的演示：微波炉（真实识别结果 + 已缓存的视频和旁白），台上直接读缓存，不再调用模型
     if (sample === "microwave") {
-      const g = demoGuide;
-      if (!g) throw new Error("demo guide missing: run the analyze step once or set DEMO_GUIDE_ID");
+      if (!demoGuide) throw new Error("demo guide missing: run the analyze step once or set DEMO_GUIDE_ID");
       send({ type: "status", stage: "safety" });
       send({ type: "status", stage: "research" });
+      // 示例是用某一种语言提前生成的：用户选了别的语言就换成那种语言（每种语言只翻译一次，之后读缓存）
+      const g = await inLanguage(demoGuide, lang);
       for (const q of ["IKEA TILLREDA microwave manual", "TILLREDA 微波炉 使用说明"]) { send({ type: "search", tool: "web_search", query: q }); await new Promise((r) => setTimeout(r, 900)); }
       send({ type: "result", guideId: g.id, file: `/guides/${g.id}.json`, guide: { ...g, demoImage: "/demo-microwave.jpg", demo: true } });
       return res.end();
     }
-    if (!image) throw new Error("缺少照片");
+    if (!image) throw coded("no_photo", "缺少照片");
     const imageBlock = { type: "image", source: { type: "base64", media_type: mediaType, data: image } };
 
     // ---- 阶段 0：安全红线（最先做，越线就不再检索、不生成教程）----
@@ -230,14 +232,55 @@ app.post("/api/analyze", async (req, res) => {
         },
       ],
     });
-    if (msg.stop_reason === "refusal" || !msg.parsed_output) throw new Error("这张照片无法分析，请换一张试试");
+    if (msg.stop_reason === "refusal" || !msg.parsed_output) throw coded("unreadable", "这张照片无法分析，请换一张试试");
     await finish(send, res, toGuideFile(msg.parsed_output, sources), lang, image);
   } catch (e) {
     console.error("analyze", e);
-    send({ type: "error", error: e?.message || "识别失败，请稍后再试" });
+    // code 给前端用（按用户的语言显示）；error 是给开发者看的原始信息
+    send({ type: "error", code: e?.code || "failed", error: e?.message || "识别失败，请稍后再试" });
     res.end();
   }
 });
+
+const coded = (code, message) => Object.assign(new Error(message), { code });
+
+// 把一份已有的说明换成用户选的语言。结果存成一份新的说明（编号 = 原编号-语言），
+// media_id 指回原来那份，所以视频不用重新生成；旁白按新语言的文字另外合成并缓存。
+const TranslationSchema = z.object({ translations: z.array(z.string()) });
+async function translateTexts(texts, lang) {
+  if (!HAS_CLAUDE) return null;
+  const msg = await claude.beta.messages.parse({
+    model: MODEL,
+    max_tokens: 16000,
+    ...FALLBACK,
+    output_config: { effort: "low", format: betaZodOutputFormat(TranslationSchema) },
+    system:
+      "You translate the lines of an appliance lesson, spoken by a friendly teacher to a non-technical user. " +
+      "Translate every numbered English line into the target language: plain words, short sentences. " +
+      "Words printed on the appliance itself (labels such as Max, Defrost, 800W) and brand or model names stay exactly as written. " +
+      "Return exactly one translation per line, in the same order.",
+    messages: [{ role: "user", content: `Target language: ${lang.english} (${lang.name}, ${lang.code}).\n\n` + texts.map((t, i) => `${i + 1}. ${t}`).join("\n") }],
+  });
+  return msg.stop_reason === "refusal" ? null : msg.parsed_output?.translations?.map((t) => t.replace(/^\d+\.\s*/, "")) || null;
+}
+async function inLanguage(guide, lang) {
+  if (guide.language?.code === lang.code) return guide;
+  const base = guide.media_id || guide.id;
+  // 翻译失败（没有密钥 / 模型出错）就退回英文版，英文版不需要调用模型
+  for (const target of lang.code === "en" ? [lang] : [lang, langOf("en")]) {
+    const id = `${base}-${target.code}`;
+    const cached = await loadGuide(id);
+    if (cached) return cached;
+    let g = null;
+    try { g = await localizeGuide(guide, target, translateTexts); } catch (e) { console.error("localize", target.code, e?.message || e); }
+    if (!g) continue;
+    Object.assign(g, { id, tutorial_id: id, media_id: base, generated_at: new Date().toISOString() });
+    await fs.writeFile(path.join(GUIDE_DIR, `${id}.json`), JSON.stringify(g, null, 2));
+    guides.set(id, g);
+    return g;
+  }
+  return guide;
+}
 
 // 看照片判断设备本身是否越过红线。越线返回“被拦截的完整说明”，否则返回 null。
 // 判断不了（模型拒答 / 没有结构化结果）时不放行。
@@ -252,7 +295,7 @@ async function triage(imageBlock, lang) {
       { role: "user", content: [imageBlock, { type: "text", text: `User's native language: ${lang.english} (${lang.name}, ${lang.code}). Classify this photo.` }] },
     ],
   });
-  if (msg.stop_reason === "refusal" || !msg.parsed_output) throw new Error("这张照片无法分析，请换一张试试");
+  if (msg.stop_reason === "refusal" || !msg.parsed_output) throw coded("unreadable", "这张照片无法分析，请换一张试试");
   const t = msg.parsed_output;
   if (t.hazard === "none") return null;
   return blockedGuide({ langCode: lang.code, appliance_native: t.appliance_native, appliance_en: t.appliance_en, brand: t.brand, kind: t.hazard, reason_native: t.reason_native, reason_en: t.reason_en });
@@ -475,8 +518,9 @@ async function pickPython() {
   return pythonCmd;
 }
 
+const mediaId = (guide) => guide.media_id || guide.id; // 翻译出来的说明共用原说明的视频
 async function startRender(guide) {
-  const id = guide.id;
+  const id = mediaId(guide);
   const job = jobs.get(id);
   if (job?.proc) { job.lastPoll = Date.now(); return job; }
   const photo = await photoOf(id);
@@ -520,8 +564,9 @@ async function scriptManifest(id) {
 
 // 把脚本的 manifest.json 转成 README 7.2 的清单；没有视频时按讲解词长度估算时间（mode: "estimated"）
 async function manifestOf(guide) {
-  const m = await scriptManifest(guide.id);
-  const job = jobs.get(guide.id);
+  const mid = mediaId(guide);
+  const m = await scriptManifest(mid);
+  const job = jobs.get(mid);
   if (!m && !job) return { tutorial_id: guide.id, status: "done", video_url: null, estimated: true, chapters: chapters(guide), clips: [] };
   const byStep = new Map((m?.steps || []).map((s) => [s.step, s]));
   let at = 0;
@@ -531,7 +576,7 @@ async function manifestOf(guide) {
     const v = byStep.get(s.step);
     if (v) {
       chs.push({ step: s.step, start: +at.toFixed(2), end: +(at + v.duration_s).toFixed(2), ready: true });
-      clips.push({ step: s.step, url: `/media/${guide.id}/${v.file}`, duration: v.duration_s });
+      clips.push({ step: s.step, url: `/media/${mid}/${v.file}`, duration: v.duration_s });
       at += v.duration_s;
     } else {
       const e = est[s.step - 1];
@@ -540,7 +585,7 @@ async function manifestOf(guide) {
   }
   const all = clips.length === guide.steps.length;
   const status = all ? "done" : job?.status || "stopped";
-  return { tutorial_id: guide.id, status, video_url: all && m?.all_steps ? `/media/${guide.id}/${m.all_steps}` : null,
+  return { tutorial_id: guide.id, status, video_url: all && m?.all_steps ? `/media/${mid}/${m.all_steps}` : null,
     chapters: chs, clips, mode: "video", ...(job?.error ? { error: job.error } : {}) };
 }
 
@@ -554,7 +599,7 @@ app.post("/api/render", async (req, res) => {
 app.get("/api/render/:id", async (req, res) => {
   const guide = await loadGuide(req.params.id);
   if (!guide) return res.status(404).json({ error: "找不到这份步骤" });
-  const j = jobs.get(guide.id);
+  const j = jobs.get(mediaId(guide));
   if (j) j.lastPoll = Date.now();
   res.json(await manifestOf(guide));
 });
