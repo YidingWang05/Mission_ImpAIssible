@@ -1,230 +1,239 @@
-# 家电小老师 HomeGuide：拍一张照片，用母语学会用家电
+# HomeGuide: take one photo, learn your appliance in your own language
 
-> Imperial AI Hackathon 2026 · 主赛道 02 Voice, Vision & Generative Media
-> 子奖：**fal** + **Anam**　｜　交叉奖：**Adaption**、**Figma**
+> Imperial AI Hackathon 2026 · Main track 02 Voice, Vision & Generative Media
+> Sponsor prizes: **fal** + **Anam**　｜　Cross-track prizes: **Adaption**, **Figma**
 
-## 1. 项目简介
+**Authors**
 
-在英国，很多人的母语不是英语：国际学生、新移民、移民老人、短期访客。宿舍里的洗衣机、出租屋里的烤箱和暖气调节器，面板上全是英文缩写，很容易用错。
+| Name | Email |
+|---|---|
+| Yiding Wang | yiding.wang26@imperial.ac.uk |
+| Yunqi Wang | yw4726@ic.ac.uk |
+| Dory Zhu | dz726@ic.ac.uk |
+| Jennifer Liu | jennifer.liu26@imperial.ac.uk |
 
-**怎么用：**
+## 1. Overview
 
-1. 打开 App，数字人老师 **Ava** 用你的母语打招呼。
-2. 对着家电控制面板拍一张照片。
-3. AI 识别品牌、型号和按钮，联网查说明书，写出这台家电的**完整说明**（所有按钮 + 所有步骤）。
-4. 生成一段**带步骤标记的母语讲解视频**：在**真实照片上标出要按的按钮**，讲解员**口型同步**，带**双语字幕**。第 1 步做好就开始播，后面的步骤边看边生成。
-5. 边看边问：一开口视频就**自动暂停**，Ava 用一两句话回答，然后**继续播放**，或者**跳到相关的那一步**。
+In the UK, many people's first language is not English: international students, new immigrants, elderly immigrants, short-term visitors. The washing machine in a student hall, the oven and the heating controller in a rented flat: their panels are covered in English abbreviations and are easy to get wrong.
 
-**设计原则：照片只识别一次，每一步视频最多生成一次。**
+**How it works:**
 
-| 顺序 | 做什么 | 谁 | 输入 | 输出 | 每次会话发生几次 |
+1. Open the app. The digital tutor **Ava** greets you in your native language.
+2. Take a photo of the appliance's control panel.
+3. The AI recognises the brand, model and buttons, looks up the manual online, and writes the **full guide** for this appliance (every button + every step).
+4. It generates a **native-language lesson video with step markers**: the button to press is **marked on the real photo**, the presenter is **lip-synced**, and there are **bilingual subtitles**. Playback starts as soon as step 1 is ready; later steps are generated while you watch.
+5. Ask while you watch: the moment you speak, the video **pauses automatically**, Ava answers in a sentence or two, then **playback continues**, or it **jumps to the relevant step**.
+
+**Design principle: the photo is recognised only once, and each step's video is generated at most once.**
+
+| Order | What | Who | Input | Output | Times per session |
 |---|---|---|---|---|---|
-| ① 识别 | 认型号、查说明书、写完整说明 | Claude | 照片 + 语言 | 完整说明 + `tutorial_id` | **1 次** |
-| ② 出视频 | 按步骤生成，拼成一整段带时间标记的视频 | fal + ffmpeg | 完整说明 + 照片 | 视频 + 每步时间标记 | **每步最多 1 次** |
-| ③ 问答 | 判断问题类型，给简短回答或跳转位置 | Ava / Claude | `tutorial_id` + 问题 | 简短回答 + 跳到第几步 | 每个问题 1 次（很便宜） |
+| ① Recognise | Identify the model, look up the manual, write the full guide | Claude | Photo + language | Full guide + `tutorial_id` | **Once** |
+| ② Make the video | Generate step by step, join into one video with time markers | fal + ffmpeg | Full guide + photo | Video + time marker per step | **At most once per step** |
+| ③ Q&A | Classify the question, give a short answer or a jump position | Ava / Claude | `tutorial_id` + question | Short answer + which step to jump to | Once per question (very cheap) |
 
-为什么这样设计：
+Why it is designed this way:
 
-- **不重复识图**：识别完把完整说明存在服务器上，之后提问只传 `tutorial_id`，不再发照片。
-- **不重复生成视频**：用户问"怎么快洗"，如果这一步已经生成过，直接**跳到那个时间点**，不重新渲染。
-- **不浪费**：视频按观看顺序一步一步生成；用户提问用到还没生成的步骤，就让它**插队**先做；用户离开就**停止生成**，没看到的部分不花钱。
-- **问答很便宜**：问答只发一张精简目录给模型，不发讲解词全文和资料链接；简单问题 Ava 自己就能答，连接口都不用调。
+- **No repeated image recognition**: after recognition the full guide is stored on the server; later questions only send the `tutorial_id`, never the photo again.
+- **No repeated video generation**: if the user asks "how do I do a quick wash" and that step has already been generated, we simply **jump to that timestamp** without re-rendering.
+- **No waste**: videos are generated one step at a time in viewing order; if a question needs a step that isn't generated yet, that step **jumps the queue**; when the user leaves, generation **stops**, so nothing is paid for that nobody saw.
+- **Q&A is cheap**: Q&A sends the model only a compact table of contents, not the full narration or the source links; simple questions Ava can answer herself without calling any endpoint.
 
-**安全设计**
+**Safety design**
 
-- 标注框用**代码**画在**真实照片**上，不让 AI 凭空生成家电画面，避免标错按钮。
-- 每一步都附**资料来源**（官网说明书 / 论坛）；**检查员 AI** 逐步核对，和照片对不上的步骤直接删除。
-- **红线**：燃气、电路维修、拆修锅炉等操作不生成教程，只给出官方售后或房东的联系方式。
-- 不确定时诚实地说"我不确定"，绝不编造（步骤数据里有 `model_confidence` 字段）。
+- The marker boxes are drawn **in code** on the **real photo**; the AI never invents a picture of the appliance, which avoids marking the wrong button.
+- Every step carries its **sources** (official manual / forums); an **inspector AI** checks step by step and deletes any step that does not match the photo.
+- **Red lines**: for gas, electrical repair, boiler dismantling and similar operations, no tutorial is generated; only the contact details of official support or the landlord are given.
+- When unsure, it honestly says "I'm not sure" and never makes things up (the step data has a `model_confidence` field).
 
-**Adaption 支线（交叉奖，离线进行）**
+**Adaption side track (cross-track prize, done offline)**
 
-主系统里"把英文说明书改写成简单的母语步骤"这件事由 Claude 完成。我们另外用 **Adaption** 把同一件事教给一个**小型开源模型**：用 Adaption 生成训练数据 → 自动微调 → 和原始模型对比打分，把排行榜上的提升作为交叉奖成果。这条支线**不接入现场演示的主流程**，只在 PPT 里展示结果（详见第 7 节）。
+In the main system, "rewriting an English manual into simple native-language steps" is done by Claude. Separately, we use **Adaption** to teach the same thing to a **small open-source model**: generate training data with Adaption → fine-tune automatically → score against the original model, and present the improvement on the leaderboard as our cross-track result. This side track is **not wired into the main flow of the live demo**; the results are only shown in the slides (see section 7).
 
 ---
 
-## 2. 快速开始
+## 2. Quick start
 
 ```bash
 npm install
-cp .env.example .env   # 填入 ANTHROPIC_API_KEY 和 ANAM_API_KEY
+cp .env.example .env   # fill in ANTHROPIC_API_KEY and ANAM_API_KEY
 npm start              # http://localhost:8000
 ```
 
-- 没有填密钥也能跑：自动进入**演示模式**（示例日文洗衣机面板 + Ava 形象照 + 浏览器朗读），方便先看效果。
-- 手机上使用需要 HTTPS（相机 / 麦克风权限）：部署到任意 HTTPS 主机，或本地用 `ngrok http 8000` 之类的隧道。
+- It runs without any keys: it enters **demo mode** automatically (a sample Japanese washing-machine panel + Ava's still image + browser text-to-speech), so you can see the effect first.
+- Using it on a phone needs HTTPS (camera / microphone permission): deploy to any HTTPS host, or use a local tunnel such as `ngrok http 8000`.
 
 ---
 
-## 3. 每个工具负责什么
+## 3. What each tool is responsible for
 
-| 工具 | 一句话 | 具体负责 | 不负责 |
+| Tool | In one sentence | Responsible for | Not responsible for |
 |---|---|---|---|
-| **Anam** | 数字人的**脸和实时对话** | 屏幕上的 Ava；听用户说话、实时回答、口型同步；**调用客户端工具**暂停 / 继续 / 跳转视频、圈按钮；简单问题直接回答 | 不看照片、不写步骤 |
-| **ElevenLabs** | **声音**（可选） | 如果 Anam 自带的声音在某种语言上不够自然，就用它替换 | 不是数字人的脸 |
-| **Claude** | **大脑** | 看照片、认型号、联网查说明书、写完整说明并翻译；当检查员；判断红线；回答 Ava 答不了的问题并给出跳转位置；给 Ava 的即兴回答补英文字幕 | 不生成图像、视频、声音 |
-| **fal** | **生成视频素材**（计划中） | 每一步的母语旁白、讲解员口型同步、照片轻微动画 | 不画标注框（用代码画）；不拼接视频（用 ffmpeg） |
-| **ffmpeg** | **拼接视频**（计划中） | 把每一步的片段拼成一整段视频，记录每一步的开始和结束时间；叠加标注和双语字幕 | |
-| **Figma** | **界面设计稿** | 手机界面、视频画面模板、二维码贴纸的样式 | 不写代码 |
-| **Adaption** | **教一个小模型写母语步骤，冲交叉奖** | 用 **Invent a Dataset** 根据一段任务描述生成"英文家电说明 → 简单母语分步说明"的训练数据；用 **AutoScientist** 同时优化数据和训练设置、自动微调；看微调后模型对比原始模型的胜率和排行榜名次 | **不接入主系统**（平台暂不支持在线调用微调后的模型）；不看照片、不出视频 |
+| **Anam** | The digital human's **face and real-time conversation** | Ava on screen; listening to the user, answering in real time, lip sync; **calling client tools** to pause / resume / jump the video and circle buttons; answering simple questions directly | Does not look at photos or write steps |
+| **ElevenLabs** | **Voice** (optional) | If Anam's built-in voice is not natural enough in some language, replace it with this | Is not the digital human's face |
+| **Claude** | **The brain** | Looks at the photo, identifies the model, looks up the manual online, writes and translates the full guide; acts as inspector; judges red lines; answers what Ava can't and gives the jump position; adds English subtitles to Ava's improvised answers | Does not generate images, video or audio |
+| **fal** | **Generates video material** (planned) | Native-language narration for each step, presenter lip sync, light animation of the photo | Does not draw marker boxes (drawn in code); does not join videos (ffmpeg does) |
+| **ffmpeg** | **Joins the video** (planned) | Joins each step's clip into one video and records each step's start and end time; overlays markers and bilingual subtitles | |
+| **Figma** | **UI design** | The phone UI, the video frame template, the style of the QR-code sticker | Does not write code |
+| **Adaption** | **Teach a small model to write native-language steps, for the cross-track prize** | Use **Invent a Dataset** to generate training data for "English appliance instructions → simple native-language step-by-step instructions" from a task description; use **AutoScientist** to optimise the data and training settings together and fine-tune automatically; look at the fine-tuned model's win rate against the original model and its leaderboard rank | **Not wired into the main system** (the platform does not yet support calling the fine-tuned model online); does not look at photos or make videos |
 
 ---
 
-## 4. 分工
+## 4. Who does what
 
-| 成员 | 角色 | 工具 | 负责的文件 |
+| Member | Role | Tools | Files owned |
 |---|---|---|---|
-| **A** | 前端 + 数字人 | Anam、ElevenLabs | `public/`、`persona.js`、`languages.js`；视频播放器（步骤标记、暂停 / 继续 / 跳转） |
-| **B** | 大脑 | Claude | `server.js` 里的 `/api/analyze`、`/api/ask`、`/api/translate`、提示词 |
-| **C** | 视频工厂 | fal、ffmpeg | `/api/render`、`/api/render/:id` 状态查询；按步骤生成和拼接 |
-| **D** | 设计 + 交叉奖 + 演示 | Figma、Adaption | `design/`、`docs/`、`adaption/`（训练数据、评测集、结果截图） |
+| **A** | Front end + digital human | Anam, ElevenLabs | `public/`, `persona.js`, `languages.js`; the video player (step markers, pause / resume / jump) |
+| **B** | Brain | Claude | `/api/analyze`, `/api/ask`, `/api/translate` in `server.js`, and the prompts |
+| **C** | Video factory | fal, ffmpeg | `/api/render`, the `/api/render/:id` status query; generating and joining step by step |
+| **D** | Design + cross-track prize + demo | Figma, Adaption | `design/`, `docs/`, `adaption/` (training data, evaluation set, result screenshots) |
 
-如果只有 3 个人：Figma 归 A，Adaption 和 PPT 归 B。
+If there are only 3 people: Figma goes to A; Adaption and the slides go to B.
 
-> B 和 D 的交接点：B 的提示词和 `output/guides/` 里的完整说明，是 D 做 Adaption 数据时的**种子样例和评测参考答案**，B 改提示词后在群里说一声。
+> Hand-over point between B and D: B's prompts and the full guides in `output/guides/` are D's **seed examples and evaluation reference answers** for the Adaption data. B tells the group after changing the prompts.
 
 ---
 
-## 5. 数据流
+## 5. Data flow
 
 ```mermaid
 flowchart LR
-    U["用户"] -- "拍照、选语言" --> A["A 前端 + Ava"]
-    A -- "照片 + 语言（只发一次）" --> B1["B 识别 /api/analyze"]
-    B1 -- "完整说明 + tutorial_id" --> A
-    A -- "tutorial_id" --> C["C 出视频 /api/render"]
-    C -- "视频地址 + 每步时间标记（逐步更新）" --> A
-    U -- "提问（视频自动暂停）" --> A
-    A -- "简单问题：Ava 直接答" --> U
-    A -- "其他问题：tutorial_id + 问题" --> B2["B 问答 /api/ask"]
-    B2 -- "简短回答 + 跳到第几步" --> A
-    A -. "需要的步骤还没生成：插队" .-> C
-    A -- "继续播放 / 跳转、Ava 说话" --> U
-    D["D 设计"] -. "Figma 设计稿" .-> A
-    D -. "视频画面模板" .-> C
-    D -. "测试照片" .-> B1
-    B1 -. "完整说明（种子样例）" .-> AD["D Adaption 离线支线"]
-    AD -. "胜率 / 排行榜截图" .-> PPT["PPT"]
+    U["User"] -- "takes photo, picks language" --> A["A front end + Ava"]
+    A -- "photo + language (sent only once)" --> B1["B recognise /api/analyze"]
+    B1 -- "full guide + tutorial_id" --> A
+    A -- "tutorial_id" --> C["C make video /api/render"]
+    C -- "video URL + time marker per step (updated step by step)" --> A
+    U -- "asks a question (video pauses automatically)" --> A
+    A -- "simple question: Ava answers directly" --> U
+    A -- "other questions: tutorial_id + question" --> B2["B Q&A /api/ask"]
+    B2 -- "short answer + which step to jump to" --> A
+    A -. "needed step not generated yet: jump the queue" .-> C
+    A -- "resume / jump, Ava speaks" --> U
+    D["D design"] -. "Figma designs" .-> A
+    D -. "video frame template" .-> C
+    D -. "test photos" .-> B1
+    B1 -. "full guides (seed examples)" .-> AD["D Adaption offline side track"]
+    AD -. "win rate / leaderboard screenshots" .-> PPT["Slides"]
 ```
 
-> 虚线 `B1 → Adaption → PPT` 是离线支线，不影响 A、B、C 的实时流程。
+> The dashed line `B1 → Adaption → Slides` is the offline side track; it does not affect the real-time flow of A, B and C.
 
-### 谁的数据交给谁
+### Whose data goes to whom
 
-| # | 从 | 交给 | 内容 | 格式 |
+| # | From | To | Content | Format |
 |---|---|---|---|---|
-| 1 | 用户 | A | 家电照片 + 选的语言 | JPG / PNG |
-| 2 | A | B | 照片 + 语言 | 调用 `POST /api/analyze` |
-| 3 | B | A | **完整说明** + `tutorial_id` | JSON（见 7.1） |
-| 4 | A | C | `tutorial_id` | 调用 `POST /api/render` |
-| 5 | C | A | 视频地址 + 每步时间标记，每做好一步更新一次 | JSON（见 7.2），前端轮询 `GET /api/render/:id` |
-| 6 | A | B | `tutorial_id` + 问题 + 当前在第几步 | 调用 `POST /api/ask` |
-| 7 | B | A | 简短回答 + 要圈的按钮 + 跳到第几步 | JSON（见 7.3） |
-| 8 | A | C | 需要优先生成的步骤 | 调用 `POST /api/render`，带 `priority_steps` |
-| 9 | B | A | 红线提示：原因 + 官方联系方式 | 完整说明里只有 `warnings`，不进入 4–8 |
-| 10 | B | D | 提示词 + 几份完整说明（含 `sources` 里的英文原文片段） | `output/guides/*.json`，D 转成训练样例（见 7.4） |
-| 11 | D | PPT | 微调前后对比结果、排行榜名次 | 截图 + `adaption/results.md` |
+| 1 | User | A | Appliance photo + chosen language | JPG / PNG |
+| 2 | A | B | Photo + language | Call `POST /api/analyze` |
+| 3 | B | A | **Full guide** + `tutorial_id` | JSON (see 7.1) |
+| 4 | A | C | `tutorial_id` | Call `POST /api/render` |
+| 5 | C | A | Video URL + time marker per step, updated each time a step is ready | JSON (see 7.2); the front end polls `GET /api/render/:id` |
+| 6 | A | B | `tutorial_id` + question + current step | Call `POST /api/ask` |
+| 7 | B | A | Short answer + button to circle + which step to jump to | JSON (see 7.3) |
+| 8 | A | C | Steps that need to be generated first | Call `POST /api/render` with `priority_steps` |
+| 9 | B | A | Red-line notice: reason + official contact details | The full guide only has `warnings`; rows 4–8 are skipped |
+| 10 | B | D | Prompts + a few full guides (with the English source excerpts in `sources`) | `output/guides/*.json`; D turns them into training examples (see 7.4) |
+| 11 | D | Slides | Before/after fine-tuning comparison, leaderboard rank | Screenshots + `adaption/results.md` |
 
-> 第 6–8 行每个问题走一次，但**不会重新识图，也不会重新生成已有的步骤**。
+> Rows 6–8 happen once per question, but **the photo is never recognised again and existing steps are never regenerated**.
 
-### 输入用在哪
+### Where each input is used
 
-| 输入 | 用在哪 |
+| Input | Where it is used |
 |---|---|
-| ① 家电照片 | 识别（只用一次）；视频里画标注 |
-| ② 用户选的语言 | 讲解词用这个语言写 + 数字人说话 / 听写语言 |
-| ③ 用户对这台家电的疑问 | **不参与识别**；交给 Ava 或 `/api/ask`，决定回答什么、跳到哪一步 |
+| ① Appliance photo | Recognition (used only once); drawing markers in the video |
+| ② The language the user picked | The narration is written in this language + the digital human's speaking / dictation language |
+| ③ The user's question about this appliance | **Not part of recognition**; handed to Ava or `/api/ask` to decide what to answer and which step to jump to |
 
-> **规则：所有人先用样例数据开发，不等别人。** 演示模式的数据在 `demo.js`，可以直接当样例步骤 JSON 用。
+> **Rule: everyone develops against sample data first and does not wait for anyone else.** The demo-mode data is in `demo.js` and can be used directly as a sample step JSON.
 
 ---
 
-## 6. 接口
+## 6. Endpoints
 
-### 6.1 识别：`POST /api/analyze`（B）
+### 6.1 Recognise: `POST /api/analyze` (B)
 
-- 输入：照片 + `language`。
-- 分两段：
-  1. Claude 看照片认出**品牌和型号**，用 web search / web fetch 联网查**官网说明书**和**论坛解答**，写研究笔记。
-  2. 再看一次照片，把笔记整理成结构化的**完整说明**：每个按钮在照片上的坐标、双语讲解、每步引用的资料来源、小贴士、安全提醒。
-- 输出：完整说明（见 7.1），其中带 `tutorial_id`。存到 `output/guides/<tutorial_id>.json`，讲解页可点"下载步骤 JSON"。
-- 前端实时显示正在搜索的关键词。
-- Claude 请求开启了服务端拒答回退（`fallbacks: "default"`），被安全策略拒绝时会自动换模型重试。
+- Input: photo + `language`.
+- Two stages:
+  1. Claude looks at the photo and identifies the **brand and model**, uses web search / web fetch to look up the **official manual** and **forum answers** online, and writes research notes.
+  2. It looks at the photo once more and organises the notes into the structured **full guide**: each button's coordinates on the photo, bilingual narration, the sources each step cites, tips, and safety warnings.
+- Output: the full guide (see 7.1), which carries the `tutorial_id`. It is saved to `output/guides/<tutorial_id>.json`; the lesson page has a "Download steps JSON" link.
+- The front end shows the search keywords in real time.
+- The Claude request has server-side refusal fallback turned on (`fallbacks: "default"`); if it is refused by the safety policy it automatically retries with another model.
 
-**这是整个会话里唯一一次发送照片给模型。**
+**This is the only time in the whole session that the photo is sent to a model.**
 
-### 6.2 出视频：`POST /api/render` 和 `GET /api/render/:tutorial_id`（C）
+### 6.2 Make the video: `POST /api/render` and `GET /api/render/:tutorial_id` (C)
 
-- 输入：
+- Input:
 ```json
 { "tutorial_id": "abc123", "priority_steps": [3, 4] }
 ```
-`priority_steps` 可选：用户提问用到还没生成的步骤时，前端传进来让它们插队。
+`priority_steps` is optional: when a question needs steps that aren't generated yet, the front end passes them in so they jump the queue.
 
-- 做什么：
-  1. 从 `output/guides/<tutorial_id>.json` 读完整说明，按步骤顺序排队生成。
-  2. 每一步单独生成一个片段（fal 出旁白和口型，代码画标注，ffmpeg 叠字幕）。
-  3. 每做好一步，就拼到整段视频末尾，并记下这一步的开始和结束时间。
-  4. 已经生成过的步骤**直接跳过**，所以重复调用不会多花钱。
-  5. 前端超过一段时间没来查询（用户离开了），就**停止**生成剩下的步骤。
-- 输出：视频清单（见 7.2）。前端用 `GET /api/render/:tutorial_id` 轮询，拿到最新的清单。
+- What it does:
+  1. Reads the full guide from `output/guides/<tutorial_id>.json` and queues the steps in order.
+  2. Generates one clip per step (fal makes the narration and lip sync, code draws the markers, ffmpeg overlays the subtitles).
+  3. Each time a step is ready, appends it to the end of the full video and records that step's start and end time.
+  4. Steps that have already been generated are **skipped**, so calling it again costs nothing extra.
+  5. If the front end has not polled for a while (the user has left), it **stops** generating the remaining steps.
+- Output: the video manifest (see 7.2). The front end polls `GET /api/render/:tutorial_id` to get the latest manifest.
 
-**来不及的退路：**不拼整段视频，直接返回每一步的小视频列表，播放器按顺序播。跳转、重播一样能做，演示效果差不多。
+**Fallback if time runs out:** don't join a full video; return the list of small per-step videos and let the player play them in order. Jumping and replaying still work, and the demo looks about the same.
 
-### 6.3 问答：`POST /api/ask`（B）
+### 6.3 Q&A: `POST /api/ask` (B)
 
-**先分流，能不调接口就不调：**
+**Triage first; don't call the endpoint if you don't have to:**
 
-| 问题类型 | 例子 | 谁来答 | 前端怎么做 |
+| Question type | Example | Who answers | What the front end does |
 |---|---|---|---|
-| 一句话能答 | "这个按钮是干什么的" | **Ava 自己答**（步骤数据已经在她的 system prompt 里），不调接口 | 暂停 → 圈按钮 → Ava 回答 → 继续播放 |
-| 要做的事在说明里 | "怎么快洗" | `/api/ask` | 暂停 → Ava 说一句 → 跳到对应步骤播放 |
-| 说明里没有 | "能烘干吗"（这台没有烘干） | `/api/ask` | 暂停 → Ava 说"我不确定"并建议查官方 → 继续播放 |
+| Answerable in one sentence | "What does this button do?" | **Ava answers herself** (the step data is already in her system prompt); no endpoint call | Pause → circle the button → Ava answers → resume |
+| The task is in the guide | "How do I do a quick wash?" | `/api/ask` | Pause → Ava says one sentence → jump to the matching step and play |
+| Not in the guide | "Can it tumble dry?" (this one can't) | `/api/ask` | Pause → Ava says "I'm not sure" and suggests checking the official source → resume |
 
-- 输入：
+- Input:
 ```json
 { "tutorial_id": "abc123", "question": "怎么快洗？", "current_step": 2, "language": "zh" }
 ```
-- 做什么：服务器用 `tutorial_id` 取出完整说明，**只把精简目录发给模型**：每个按钮的名字和作用、每一步的一句话概要。讲解词全文、资料链接都不发，照片也不发。模型判断问题属于哪一类，返回很短的结果。说明里找不到答案时，诚实地说"我不确定"，不编造步骤。
-- 输出：见 7.3。
+- What it does: the server uses the `tutorial_id` to fetch the full guide and **sends the model only the compact table of contents**: each button's name and function, and a one-sentence summary of each step. The full narration and the source links are not sent, and neither is the photo. The model decides which type the question is and returns a very short result. When the answer isn't in the guide, it honestly says "I'm not sure" and does not invent steps.
+- Output: see 7.3.
 
-### 6.4 Adaption 支线：微调小模型（D，离线）
+### 6.4 Adaption side track: fine-tuning a small model (D, offline)
 
-**目标**：让一个小型开源模型学会主系统里 Claude 做的那一步——把英文说明书片段改写成**简短、口语化、按步骤编号**的母语说明，并且遇到红线操作时拒绝、给出联系官方的建议。
+**Goal**: teach a small open-source model the step Claude does in the main system: rewriting an English manual excerpt into **short, conversational, numbered** native-language instructions, and refusing red-line operations with advice to contact official support.
 
-**步骤：**
+**Steps:**
 
-1. **写任务描述**（周六 16:15 前定稿）：一段话说明模型要学的行为，例如"输入是一段英文家电说明书原文和目标语言；输出是 3–6 步的简单母语操作步骤，每步一句话，只用说明书里有的信息，不确定就说不确定；涉及燃气、电路、拆修锅炉时不给步骤，只建议联系房东或官方售后"。
-2. **生成数据**：把任务描述和 5–10 条种子样例（来自 `demo.js` 和 `output/guides/`）交给 **Invent a Dataset**，生成指令数据（"输入 → 标准答案"成对的样例），格式见 7.4。
-3. **检查数据**（D 抽查 30–50 条）：删掉编造按钮、步骤太长、语言不对、红线没拦住的样例。至少 10% 的样例是红线场景、10% 是"说明里没有，应该说不确定"的场景。
-4. **留出评测集**：另外准备 30–50 条**不参与训练**的样例（最好来自我们真实拍过的 3 台家电），只用来打分。
-5. **微调**：用 **AutoScientist** 选一个小模型做底座，自动调整数据和训练设置，跑完整的微调。
-6. **看结果**：记录微调后模型对比原始底座模型的**胜率**，以及排行榜名次；挑 2–3 个前后对比最明显的例子截图。结果写进 `adaption/results.md`，给 PPT 用。
+1. **Write the task description** (final by Saturday 16:15): one paragraph describing the behaviour the model should learn, e.g. "The input is an English appliance manual excerpt and a target language; the output is 3–6 simple native-language operating steps, one sentence each, using only information from the manual, and saying it is unsure when unsure; for gas, electrics or boiler dismantling, give no steps and only advise contacting the landlord or official support".
+2. **Generate data**: give the task description and 5–10 seed examples (from `demo.js` and `output/guides/`) to **Invent a Dataset** to generate instruction data (paired "input → reference answer" examples); format in 7.4.
+3. **Check the data** (D spot-checks 30–50 rows): delete examples that invent buttons, have steps that are too long, are in the wrong language, or let a red line through. At least 10% of examples are red-line cases and 10% are "not in the guide, should say unsure" cases.
+4. **Hold out an evaluation set**: prepare another 30–50 examples that **are not used for training** (ideally from the 3 appliances we really photographed), used only for scoring.
+5. **Fine-tune**: use **AutoScientist** to pick a small model as the base, tune the data and training settings automatically, and run the full fine-tune.
+6. **Read the results**: record the fine-tuned model's **win rate** against the original base model and its leaderboard rank; screenshot the 2–3 examples with the clearest before/after difference. Write the results into `adaption/results.md` for the slides.
 
-**不做的事**：不把微调后的模型接进 `/api/analyze` 或 `/api/ask`；现场演示全部走 Claude。PPT 里可以说"下一步：用这个小模型替代部分 Claude 调用，降低每台家电的成本"。
+**What we don't do**: we don't wire the fine-tuned model into `/api/analyze` or `/api/ask`; the live demo runs entirely on Claude. The slides can say "next step: use this small model in place of some Claude calls to lower the cost per appliance".
 
 ---
 
-### 6.5 二维码：扫码再看这份讲解
+### 6.5 QR code: scan to watch this lesson again
 
-- **什么时候生成**：`/api/render` 或 `GET /api/render/:id` 返回 `status: "done"` 时（每一步视频都做好了），清单里多一个 `share` 字段，同时把二维码存到 `output/qr/<编号>.png`、`.svg`、`.txt`（链接），可以直接打印成贴纸。没有 fal 视频、只按讲解词估算时间的讲解，也算"做好"。红线（`blocked`）的说明不生成二维码。
-- **二维码里的链接**：`<公开地址>/?t=<原始说明的编号>`。用原始编号（`media_id`），所以同一台家电**所有语言共用一张二维码**。
-- **公开地址**：优先用 `.env` 里的 `PUBLIC_URL`；不填就用当前访问的地址，是 `localhost` 时自动换成电脑的局域网 IP（同一个 Wi-Fi 的手机能打开）。手机上要语音提问必须是 https，演示时建议 `PUBLIC_URL` 填 ngrok 地址。
-- **扫码之后**：首页显示"已有讲解：家电名"，用户选自己的语言，点"开始"直接进入讲解：**不拍照、不识别、不重新生成视频**；别的语言第一次打开时翻译一次，之后读缓存。Ava 照常可以提问、跳转。
+- **When it is generated**: when `/api/render` or `GET /api/render/:id` returns `status: "done"` (every step's video is ready), the manifest gains a `share` field, and the QR code is saved to `output/qr/<id>.png`, `.svg` and `.txt` (the link), ready to print as a sticker. A lesson with no fal videos, where times are only estimated from the narration, also counts as "ready". No QR code is generated for red-line (`blocked`) guides.
+- **The link in the QR code**: `<public address>/?t=<id of the original guide>`. It uses the original id (`media_id`), so **all languages share one QR code** for the same appliance.
+- **Public address**: `PUBLIC_URL` in `.env` is used first; if it is empty, the address currently being visited is used, and when that is `localhost` it is replaced with the computer's LAN IP (phones on the same Wi-Fi can open it). Voice questions on a phone require https, so for the demo we recommend setting `PUBLIC_URL` to an ngrok address.
+- **After scanning**: the home page shows "Existing lesson: appliance name"; the user picks their language and taps "Start" to go straight into the lesson: **no photo, no recognition, no video regeneration**. Another language is translated once the first time it is opened, then read from cache. Ava can still take questions and jump as usual.
 
-| 接口 | 说明 |
+| Endpoint | Description |
 |---|---|
-| `GET /api/qr/<编号>.png` / `.svg` | 二维码图片；`.png?download=1` 直接下载 |
-| `GET /api/guide/<编号>?lang=zh` | 扫码打开时取说明（换成这种语言），`guide.demoImage` 指向照片 |
-| `GET /api/photo/<编号>` | 这份说明的家电照片 |
+| `GET /api/qr/<id>.png` / `.svg` | The QR code image; `.png?download=1` downloads it directly |
+| `GET /api/guide/<id>?lang=zh` | Fetches the guide when opened from a scan (in this language); `guide.demoImage` points to the photo |
+| `GET /api/photo/<id>` | The appliance photo for this guide |
 
 ```json
 "share": { "url": "https://xxxx.ngrok-free.app/?t=abc123", "qr_png": "/api/qr/abc123.png", "qr_svg": "/api/qr/abc123.svg", "secure": true }
 ```
 
-## 7. 数据格式
+## 7. Data formats
 
-### 7.1 完整说明（`/api/analyze` 输出）
+### 7.1 Full guide (output of `/api/analyze`)
 
 ```json
 {
@@ -250,19 +259,19 @@ flowchart LR
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |---|---|
-| `tutorial_id` | 这份教程的编号，之后视频和问答都靠它取上下文 |
-| `model_confidence` | 型号识别把握：`high` / `medium` / `low`，低时 Ava 要说"我不确定" |
-| `buttons[].box` | 按钮在照片上的位置：左上角 `x`、`y`，宽 `w`、高 `h`，单位是像素 |
-| `buttons[].panel_text` | 面板上印的原文 |
-| `steps[].button_id` | 这一步要按哪个按钮，对应 `buttons[].id` |
-| `steps[].action_native` | 一句话概要，`/api/ask` 的精简目录就用它 |
-| `steps[].narration_native` / `narration_en` | 讲解员念的母语讲解词 / 英文字幕 |
-| `steps[].sources` | 这一步依据的资料链接 |
-| `warnings` | 安全提醒；越过红线时不生成步骤，只给原因和官方联系方式 |
+| `tutorial_id` | The id of this tutorial; video and Q&A both use it to fetch context afterwards |
+| `model_confidence` | Confidence in the model identification: `high` / `medium` / `low`; when low, Ava should say "I'm not sure" |
+| `buttons[].box` | The button's position on the photo: top-left `x`, `y`, width `w`, height `h`, in pixels |
+| `buttons[].panel_text` | The original text printed on the panel |
+| `steps[].button_id` | Which button to press in this step; matches `buttons[].id` |
+| `steps[].action_native` | A one-sentence summary; the compact table of contents for `/api/ask` uses it |
+| `steps[].narration_native` / `narration_en` | The native-language narration the presenter reads / the English subtitle |
+| `steps[].sources` | Links to the sources this step is based on |
+| `warnings` | Safety warnings; when a red line is crossed no steps are generated, only the reason and official contact details |
 
-### 7.2 视频清单（`/api/render` 输出）
+### 7.2 Video manifest (output of `/api/render`)
 
 ```json
 {
@@ -282,17 +291,17 @@ flowchart LR
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |---|---|
-| `status` | `rendering` 还在生成 / `done` 全部做完 / `stopped` 用户离开后停止 |
-| `video_url` | 目前已经拼好的整段视频 |
-| `chapters[].start` / `end` | 这一步在整段视频里的开始和结束时间（秒），播放器用来画步骤标记、跳转、重播 |
-| `chapters[].ready` | 这一步做好没有；没做好时前端显示"正在准备"，Ava 先陪聊 |
-| `clips` | 每一步的单独小视频（退路方案用） |
+| `status` | `rendering` still generating / `done` all finished / `stopped` stopped after the user left |
+| `video_url` | The full video joined so far |
+| `chapters[].start` / `end` | This step's start and end time in the full video (seconds); the player uses them to draw step markers, jump and replay |
+| `chapters[].ready` | Whether this step is ready; when it isn't, the front end shows "preparing" and Ava keeps the user company |
+| `clips` | The separate small video for each step (used by the fallback plan) |
 
-视频按"**家电型号 + 步骤 + 语言**"存储，同一台洗衣机换个用户、换个问题都能直接复用。
+Videos are stored by "**appliance model + step + language**", so the same washing machine can be reused directly for another user or another question.
 
-### 7.3 问答结果（`/api/ask` 输出）
+### 7.3 Q&A result (output of `/api/ask`)
 
 ```json
 {
@@ -305,19 +314,19 @@ flowchart LR
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |---|---|
-| `type` | `answer_only`：只回答 / `jump`：回答后跳到某一步 / `unsure`：说明里没有 |
-| `answer_native` / `answer_en` | 一两句话的简短回答，Ava 念母语，字幕显示英文 |
-| `highlight_button` | 要在照片上圈出的按钮（可选） |
-| `jump_to_step` | `type = jump` 时跳到第几步；如果这一步还没生成，前端调 `/api/render` 让它插队 |
-| `resume` | `true`：回答完从暂停处继续播放 |
+| `type` | `answer_only`: just answer / `jump`: answer then jump to a step / `unsure`: not in the guide |
+| `answer_native` / `answer_en` | A short answer of one or two sentences; Ava reads the native-language one, the subtitle shows the English |
+| `highlight_button` | The button to circle on the photo (optional) |
+| `jump_to_step` | Which step to jump to when `type = jump`; if that step isn't generated yet, the front end calls `/api/render` to make it jump the queue |
+| `resume` | `true`: after answering, continue playback from where it paused |
 
-**改格式之前必须先在群里说**，因为 A、B、C 都依赖它。
+**Tell the group before changing a format**, because A, B and C all depend on it.
 
-### 7.4 Adaption 训练样例（`adaption/train.jsonl`、`adaption/eval.jsonl`）
+### 7.4 Adaption training examples (`adaption/train.jsonl`, `adaption/eval.jsonl`)
 
-每行一条"输入 → 标准答案"：
+One "input → reference answer" per line:
 
 ```json
 {
@@ -326,132 +335,132 @@ flowchart LR
 }
 ```
 
-红线样例的标准答案只写原因和建议，例如：`"这一步涉及燃气，不建议自己操作。请联系房东或品牌官方售后。"`
+The reference answer for a red-line example contains only the reason and the advice, e.g. `"这一步涉及燃气，不建议自己操作。请联系房东或品牌官方售后。"`
 
-| 文件 | 内容 | 条数（建议） |
+| File | Content | Rows (suggested) |
 |---|---|---|
-| `train.jsonl` | Invent a Dataset 生成并经过 D 抽查的训练样例 | 几百到几千条 |
-| `eval.jsonl` | 留出的评测样例，**不参与训练** | 30–50 条 |
-| `results.md` | 底座模型、胜率、排行榜名次、前后对比例子 | — |
+| `train.jsonl` | Training examples generated by Invent a Dataset and spot-checked by D | A few hundred to a few thousand |
+| `eval.jsonl` | Held-out evaluation examples, **not used for training** | 30–50 |
+| `results.md` | Base model, win rate, leaderboard rank, before/after examples | — |
 
 ---
 
-## 8. 数字人 Ava
+## 8. The digital human Ava
 
-已在 Anam 账号里创建保存版 persona **"Ava – Appliance Tutor"**，可以在 Anam Lab 里直接预览。
+A saved persona **"Ava – Appliance Tutor"** has been created in the Anam account and can be previewed directly in Anam Lab.
 
-| | ID | 说明 |
+| | ID | Description |
 |---|---|---|
-| Persona | `f18ab547-696d-4787-aab3-9cc1f7644599` | Anam Lab 里的保存版 |
-| 形象 Avatar | `edf6fdcb-acab-44b8-b974-ded72665ee26` | Mia – studio（写实真人），渲染模型 `cara-4`（口型同步） |
-| 声音 Voice | `90313ddc-4fc0-11f1-84b0-52bacf74fa75` | Amanda – Warm Guide，美式英语（Cartesia sonic-3.6） |
-| 模型 LLM | `65421f1c-c7de-4bc4-ac27-d171c16ef41f` | Qwen 3.8 27B（Anam 托管，低延迟、支持工具调用） |
+| Persona | `f18ab547-696d-4787-aab3-9cc1f7644599` | The saved version in Anam Lab |
+| Avatar | `edf6fdcb-acab-44b8-b974-ded72665ee26` | Mia – studio (photorealistic), rendering model `cara-4` (lip sync) |
+| Voice | `90313ddc-4fc0-11f1-84b0-52bacf74fa75` | Amanda – Warm Guide, American English (Cartesia sonic-3.6) |
+| LLM | `65421f1c-c7de-4bc4-ac27-d171c16ef41f` | Qwen 3.8 27B (hosted by Anam, low latency, supports tool calling) |
 
-都定义在 `persona.js`。选英语时用 Ava 的英文声音；选其他母语时换成该语言的女声，形象和模型不变。
+All defined in `persona.js`. When English is chosen, Ava's English voice is used; for any other native language it switches to a female voice in that language, with the same avatar and model.
 
-**两段会话：**
+**Two session phases:**
 
-- **greet**：Ava 用 `initialMessage` 打招呼，陪用户拍照。
-- **lesson**：识别完成后重连，把完整说明写进 system prompt，并给 Ava 客户端工具：`next_step` / `previous_step` / `repeat_step` / `go_to_step` / `highlight_button`，以及视频控制 `pause_video` / `resume_video`。
-  - 用户说"下一步""再说一遍"：Ava 调工具，播放器按步骤标记跳转或重播，**不重新生成**。
-  - 用户一开口提问：先 `pause_video`；简单问题 Ava 自己答（必要时 `highlight_button`），答完 `resume_video`；答不了的转给 `/api/ask`，按返回结果跳转或继续。
+- **greet**: Ava greets with `initialMessage` and keeps the user company while they take the photo.
+- **lesson**: reconnects after recognition, writes the full guide into the system prompt, and gives Ava client tools: `next_step` / `previous_step` / `repeat_step` / `go_to_step` / `highlight_button`, plus the video controls `pause_video` / `resume_video`.
+  - The user says "next" or "say it again": Ava calls a tool and the player jumps or replays by step marker, **without regenerating anything**.
+  - The moment the user starts a question: `pause_video` first; Ava answers simple questions herself (with `highlight_button` if needed) and then `resume_video`; what she can't answer goes to `/api/ask`, and the result decides whether to jump or continue.
 
-（Anam 不能在会话中途改 system prompt，所以讲解阶段要重新连接一次，大约 1 秒。）
+(Anam cannot change the system prompt mid-session, so the lesson phase reconnects once, which takes about 1 second.)
 
-| 其他功能 | 实现 |
+| Other features | Implementation |
 |---|---|
-| 照片标注 | 当前步骤的按钮用橙色脉冲圈 + 步骤号；Ava 讲解时指向的按钮用粉色；数字人画中画自动躲开按钮 |
-| 双语字幕 | 讲解词：母语逐字点亮 + 英文；Ava 的即兴回答：说完后由 Claude 补一行英文 |
-| 步骤标记 | 播放器进度条上按 `chapters` 画出每一步，点一下就跳过去 |
-| 讲解视频导出 | 右上角 ● 录制，把照片、标注、数字人、字幕和声音合成为 MP4 / WebM |
-| 二维码 | 讲解视频全部做好后，右上角出现 ▦ 按钮并弹出提示；点开可以下载 / 复制。扫码直接进入这份讲解（见 6.5） |
+| Photo markers | The current step's button gets an orange pulsing ring + the step number; the button Ava is pointing at while explaining is pink; the digital human's picture-in-picture moves out of the way of the buttons automatically |
+| Bilingual subtitles | Narration: the native language lights up character by character + English; Ava's improvised answers: Claude adds a line of English after she finishes |
+| Step markers | Each step is drawn on the player's progress bar from `chapters`; click one to jump there |
+| Lesson video export | The ● at the top right records, combining the photo, markers, digital human, subtitles and sound into MP4 / WebM |
+| QR code | When all lesson videos are ready, a ▦ button appears at the top right with a notice; open it to download / copy. Scanning goes straight into this lesson (see 6.5) |
 
 ---
 
-## 9. 文件结构
+## 9. File structure
 
 ```
 .
 ├── README.md
-├── .env.example        # API key 模板（不含真实 key）
-├── server.js           # /api/analyze、/api/ask、/api/render、/api/session-token、/api/translate
-├── persona.js          # Ava 的形象 / 声音 / 模型 ID、提示词、客户端工具
-├── languages.js        # 10 种母语，每种配一个 Anam 母语声音 + 界面文案
-├── demo.js             # 演示模式数据（也是样例步骤 JSON）
-├── public/             # 前端（无构建步骤），含 demo-panel.svg
-├── output/guides/      # 完整说明，文件名是 tutorial_id
-├── output/media/       # 每一步的视频片段和拼好的整段视频
-├── output/qr/          # 讲解做好后自动生成的二维码（png / svg / 链接）
-├── design/             # D：Figma 链接、截图
-├── adaption/           # D：任务描述、train.jsonl、eval.jsonl、results.md、排行榜截图
-└── docs/               # D：演示脚本、PPT
+├── .env.example        # API key template (no real keys)
+├── server.js           # /api/analyze, /api/ask, /api/render, /api/session-token, /api/translate
+├── persona.js          # Ava's avatar / voice / model IDs, prompts, client tools
+├── languages.js        # 10 native languages, each with an Anam native voice + UI strings
+├── demo.js             # Demo-mode data (also a sample step JSON)
+├── public/             # Front end (no build step), includes demo-panel.svg
+├── output/guides/      # Full guides; the file name is the tutorial_id
+├── output/media/       # Each step's video clip and the joined full video
+├── output/qr/          # QR codes generated automatically once a lesson is ready (png / svg / link)
+├── design/             # D: Figma links, screenshots
+├── adaption/           # D: task description, train.jsonl, eval.jsonl, results.md, leaderboard screenshots
+└── docs/               # D: demo script, slides
 ```
 
-支持的语言：中文、English、Español、Tiếng Việt、日本語、한국어、Français、العربية、हिन्दी、Português。加语言照着 `languages.js` 抄一项即可。
+Supported languages: 中文, English, Español, Tiếng Việt, 日本語, 한국어, Français, العربية, हिन्दी, Português. To add a language, copy one entry in `languages.js`.
 
 ---
 
-## 10. API key 与可调项
+## 10. API keys and settings
 
-| 变量 | 说明 |
+| Variable | Description |
 |---|---|
-| `ANTHROPIC_API_KEY` | 必填（不填进入演示模式） |
-| `ANAM_API_KEY` | 必填（不填进入演示模式） |
-| `FAL_KEY` | 做 fal 视频时需要 |
-| `ELEVENLABS_API_KEY` | 可选 |
-| `ADAPTION_API_KEY` | 只有 D 做 Adaption 支线时需要；主系统不读它，不填也不影响演示 |
-| `ANAM_AVATAR_ID` / `ANAM_LLM_ID` | 换数字人形象 / Ava 的对话模型 |
-| `CLAUDE_MODEL` | 换 Claude 模型 |
-| `PORT` | 端口，默认 8000 |
-| `PUBLIC_URL` | 二维码里的公开地址（如 ngrok 的 https 地址）；不填自动用当前地址 / 局域网 IP |
+| `ANTHROPIC_API_KEY` | Required (demo mode if empty) |
+| `ANAM_API_KEY` | Required (demo mode if empty) |
+| `FAL_KEY` | Needed for fal videos |
+| `ELEVENLABS_API_KEY` | Optional |
+| `ADAPTION_API_KEY` | Only needed when D works on the Adaption side track; the main system does not read it, and leaving it empty does not affect the demo |
+| `ANAM_AVATAR_ID` / `ANAM_LLM_ID` | Change the digital human's avatar / Ava's conversation model |
+| `CLAUDE_MODEL` | Change the Claude model |
+| `PORT` | Port, default 8000 |
+| `PUBLIC_URL` | The public address in the QR code (e.g. an ngrok https address); if empty, the current address / LAN IP is used automatically |
 
-**多个密钥自动轮换：** 同一个服务可以放多个密钥（`NAME`、`NAME_2`、`NAME_3` …，见 `.env.example`）。先用第一个，额度不足 / 鉴权失败 / 被限流时自动换下一个。JavaScript 用 `keys.js`（`withKey` / `fetchWithKey`），Python 用 `keyring.py`（`KeyRing`）；Claude、Anam、fal 已经接上，新接的服务（ElevenLabs、Adaption）也请走这两个文件。
+**Automatic rotation across several keys:** one service can have several keys (`NAME`, `NAME_2`, `NAME_3` …, see `.env.example`). The first is used first; when it runs out of credit / fails authentication / is rate-limited, the next one takes over automatically. JavaScript uses `keys.js` (`withKey` / `fetchWithKey`), Python uses `keyring.py` (`KeyRing`); Claude, Anam and fal are already wired up, and newly added services (ElevenLabs, Adaption) should go through these two files as well.
 
-**自动改代码的智能体：** `npm run agent -- --prompt AGENT_PROMPT.md --branch tonight-demo` 会在项目旁边另建一个工作区，让 Claude 按任务文件在那个分支上干活。一个 Claude 账户的额度用完时自动换下一个密钥，并接着同一段对话继续；中断后重新运行同一条命令会接着做。它不会 push、不会改 `.env`。默认没有总花费上限（用完一个密钥换下一个），想设上限用 `--max-usd`。用法见 `tools/run_agent.mjs` 开头，或 `npm run agent -- --help`。
+**The agent that changes the code automatically:** `npm run agent -- --prompt AGENT_PROMPT.md --branch tonight-demo` creates a separate workspace next to the project and has Claude work on that branch according to the task file. When one Claude account's credit runs out it switches to the next key automatically and continues the same conversation; after an interruption, running the same command again carries on. It does not push and does not change `.env`. By default there is no total spending cap (when one key is used up it moves to the next); use `--max-usd` to set one. For usage see the top of `tools/run_agent.mjs`, or `npm run agent -- --help`.
 
-⚠️ **`.env` 已写入 `.gitignore`，绝对不要把真实的 key 提交到 GitHub。** 仓库一旦公开，key 会被别人盗用，额度很快被刷光。
+⚠️ **`.env` is listed in `.gitignore`. Never commit real keys to GitHub.** Once the repository is public, the keys will be stolen and the credit used up very quickly.
 
 ---
 
-## 11. 时间表与同步点
+## 11. Timetable and sync points
 
-| 时间 | A 前端 + 数字人 | B 大脑 | C 视频工厂 | D 设计 + 交叉奖 |
+| Time | A front end + digital human | B brain | C video factory | D design + cross-track prize |
 |---|---|---|---|---|
-| **周六 15:50–16:15** | 注册 Anam，跑通官方示例 | 手写样例步骤数据 | 注册 fal；问 fal 的智能体该用哪些模型 | 拍 3 台家电照片；写 Adaption 任务描述 + 5–10 条种子样例，启动 Invent a Dataset |
-| 🚩 **16:15 同步** | 样例数据、照片、API key 全部就位 | | | |
-| **16:15–20:00** | 网页 + Ava 说中文；定义工具 | 照片 → 完整说明；测按钮位置准不准 | 样例数据 → 每步视频片段 | Figma 设计稿 17:00 前交出；抽查 Adaption 数据（删坏样例、补红线和"不确定"样例）；准备评测集 |
-| 🚩 **20:00 同步** | A 页面能交互，B 能处理真实照片，C 能出每步视频 | | | |
-| **20:00–23:00** | **优先 ③**：提问自动暂停 → Ava 简短回答 → 继续播放 | **优先 ②**：`/api/ask` 用 `tutorial_id` 取上下文、只发精简目录；检查员 + 安全红线 | **优先 ①**：拼成整段视频 + 步骤时间标记；已生成的步骤跳过 | 用 AutoScientist 启动微调（跑一整夜）；PPT 初稿；当测试用户 |
-| 🚩 **23:00 同步** | **端到端跑通，粗糙也行** | | | |
-| **周日 9:00–12:00** | 步骤标记跳转 / 重播；等待时陪聊；套用设计 | 问答打磨；加第二种语言 | 第二种语言的语音和口型；双语字幕 | 看胜率和排行榜，截图前后对比例子，写 `adaption/results.md`；二维码页面；PPT 定稿 |
-| 🚩 **12:00 同步** | **功能冻结，录备用演示视频** | | | |
-| **周日下午** | 现场操作 | 准备技术问答 | 只修 bug | 主讲 |
+| **Sat 15:50–16:15** | Register with Anam, get the official example running | Hand-write sample step data | Register with fal; ask fal's agent which models to use | Photograph 3 appliances; write the Adaption task description + 5–10 seed examples, start Invent a Dataset |
+| 🚩 **16:15 sync** | Sample data, photos and API keys all in place | | | |
+| **16:15–20:00** | Web page + Ava speaking Chinese; define the tools | Photo → full guide; test whether button positions are accurate | Sample data → a video clip per step | Hand over Figma designs by 17:00; spot-check the Adaption data (delete bad examples, add red-line and "unsure" examples); prepare the evaluation set |
+| 🚩 **20:00 sync** | A's page is interactive, B can handle real photos, C can produce each step's video | | | |
+| **20:00–23:00** | **Priority ③**: a question pauses automatically → Ava answers briefly → playback continues | **Priority ②**: `/api/ask` fetches context by `tutorial_id` and sends only the compact table of contents; inspector + safety red lines | **Priority ①**: join into a full video + step time markers; skip steps already generated | Start fine-tuning with AutoScientist (runs overnight); first draft of the slides; act as test user |
+| 🚩 **23:00 sync** | **Working end to end, rough is fine** | | | |
+| **Sun 9:00–12:00** | Jump / replay by step marker; keep the user company while waiting; apply the design | Polish Q&A; add a second language | Voice and lip sync for the second language; bilingual subtitles | Read the win rate and leaderboard, screenshot before/after examples, write `adaption/results.md`; QR-code page; final slides |
+| 🚩 **12:00 sync** | **Feature freeze, record the backup demo video** | | | |
+| **Sun afternoon** | Operate live | Prepare for technical Q&A | Bug fixes only | Lead presenter |
 
-**今晚的三个优先项（建议按 ② → ③ → ① 的顺序完成）**
+**Tonight's three priorities (suggested order: ② → ③ → ①)**
 
-| 编号 | 内容 | 负责 | 为什么排这个顺序 |
+| No. | Content | Owner | Why this order |
 |---|---|---|---|
-| ② | `/api/ask` 用 `tutorial_id` 取上下文，只发相关信息 | B | 改动最小，A 的暂停逻辑依赖它的返回格式 |
-| ③ | 提问自动暂停 → 简短语音回答 → 继续播放 | A | 接上 ② 就能演示多轮问答 |
-| ① | 整段视频 + 步骤时间标记，跳转和重播不用重新渲染 | C | 工作量最大；来不及就用"每步小视频 + 播放列表"的退路 |
+| ② | `/api/ask` fetches context by `tutorial_id` and sends only the relevant information | B | Smallest change; A's pause logic depends on its return format |
+| ③ | A question pauses automatically → short spoken answer → playback continues | A | Once ② is connected, multi-turn Q&A can be demonstrated |
+| ① | Full video + step time markers; jumping and replaying without re-rendering | C | The most work; if time runs out, use the "small video per step + playlist" fallback |
 
-这三项做完，多轮问答就顺畅了，也避开了两类开销：重复识图、重复生成视频。
+With these three done, multi-turn Q&A runs smoothly, and two kinds of cost are avoided: repeated image recognition and repeated video generation.
 
-**周日上午的优先级**
+**Sunday morning priorities**
 
-1. 演示路线稳定：同一条路线跑 5 到 10 遍不出错；处理慢和失败的情况。**演示用的那台洗衣机，视频提前全部生成好。**
-2. 亮点：边看边问、第二种语言、红线演示、视频画面。
-3. 有时间才做：边看边生成 + 提问步骤插队、用户离开就停止生成、二维码、整体美化。
+1. A stable demo route: the same route runs 5 to 10 times without error; handle slow and failed cases. **For the washing machine used in the demo, generate all videos in advance.**
+2. Highlights: asking while watching, a second language, the red-line demo, the video frame.
+3. Only if there is time: generate while watching + queue-jumping for question steps, stop generating when the user leaves, the QR code, overall polish.
 
-Adaption 支线和上面三级**互不抢人**：微调在后台跑，D 只需要周日上午收结果、截图。如果周日 11:00 还没有结果，PPT 就展示数据集和评测方法，说明"微调进行中"。
+The Adaption side track **does not compete for people** with the three levels above: fine-tuning runs in the background, and D only needs to collect the results and take screenshots on Sunday morning. If there are still no results by Sunday 11:00, the slides show the dataset and the evaluation method and say "fine-tuning in progress".
 
-如果周六晚上没跑通，周日上午**只做串联**，第 3 级全部砍掉。
+If it isn't working on Saturday night, Sunday morning is **integration only**, and level 3 is cut entirely.
 
 ---
 
-## 12. 三分钟演示脚本
+## 12. Three-minute demo script
 
-1. **（30 秒）痛点**：刚到伦敦的留学生第一次用宿舍洗衣机，面板全是英文缩写，把毛衣洗缩了。
-2. **（90 秒）现场演示**：拍照 → Ava 用中文说"稍等，我在查说明书"，屏幕上显示正在搜的关键词 → 讲解视频开始播放：照片上标出按钮，讲解员用中文讲解，带双语字幕，进度条上有步骤标记 → 用户问"这个按钮是干什么的"，视频自动暂停，Ava 圈出按钮回答一句，视频继续 → 用户问"羊毛衣服怎么洗"，Ava 回答一句，视频直接跳到对应步骤。
-3. **（30 秒）换人换语言**：同一台洗衣机切换成另一种语言；再展示一张燃气锅炉照片被红线拦截。
-4. **（30 秒）商业模式与技术**：照片只识别一次、每一步视频只生成一次，同一台洗衣机的视频所有租客共用；宿舍和房东用二维码贴纸；每个赞助商工具用在哪里；Adaption：一页 PPT 展示"用 Adaption 生成数据 → 微调小模型 → 胜率提升多少 / 排行榜第几"，加一个前后对比例子，并说明下一步可以用这个小模型降低成本。
+1. **(30 s) The pain point**: an international student who has just arrived in London uses the washing machine in their hall for the first time; the panel is all English abbreviations, and they shrink a jumper.
+2. **(90 s) Live demo**: take a photo → Ava says in Chinese "one moment, I'm looking up the manual", and the screen shows the keywords being searched → the lesson video starts: the button is marked on the photo, the presenter explains in Chinese, with bilingual subtitles and step markers on the progress bar → the user asks "what does this button do?", the video pauses automatically, Ava circles the button and answers in one sentence, the video continues → the user asks "how do I wash wool?", Ava answers in one sentence and the video jumps straight to the matching step.
+3. **(30 s) Another person, another language**: switch the same washing machine to another language; then show a photo of a gas boiler being stopped by the red line.
+4. **(30 s) Business model and technology**: the photo is recognised only once and each step's video is generated only once, so every tenant shares the same washing machine's videos; halls and landlords use QR-code stickers; where each sponsor's tool is used; Adaption: one slide showing "generate data with Adaption → fine-tune a small model → how much the win rate improved / leaderboard rank", plus one before/after example, and a note that the next step is to use this small model to lower costs.
