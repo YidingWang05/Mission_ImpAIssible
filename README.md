@@ -74,7 +74,7 @@ npm start              # http://localhost:8000
 | **Claude** | **The brain** | Looks at the photo, identifies the model, looks up the manual online, writes and translates the full guide; acts as inspector; judges red lines; answers what Ava can't and gives the jump position; adds English subtitles to Ava's improvised answers | Does not generate images, video or audio |
 | **fal** | **Generates video material** (planned) | Native-language narration for each step, presenter lip sync, light animation of the photo | Does not draw marker boxes (drawn in code); does not join videos (ffmpeg does) |
 | **ffmpeg** | **Joins the video** (planned) | Joins each step's clip into one video and records each step's start and end time; overlays markers and bilingual subtitles | |
-| **Figma** | **UI design** | The phone UI, the video frame template, the style of the QR-code sticker | Does not write code |
+| **Figma** | **UI design** | The phone UI, the video frame template | Does not write code |
 | **Adaption** | **Teach a small model to write native-language steps, for the cross-track prize** | Use **Invent a Dataset** to generate training data for "English appliance instructions → simple native-language step-by-step instructions" from a task description; use **AutoScientist** to optimise the data and training settings together and fine-tune automatically; look at the fine-tuned model's win rate against the original model and its leaderboard rank | **Not wired into the main system** (the platform does not yet support calling the fine-tuned model online); does not look at photos or make videos |
 
 ---
@@ -213,23 +213,6 @@ flowchart LR
 **What we don't do**: we don't wire the fine-tuned model into `/api/analyze` or `/api/ask`; the live demo runs entirely on Claude. The slides can say "next step: use this small model in place of some Claude calls to lower the cost per appliance".
 
 ---
-
-### 6.5 QR code: scan to watch this lesson again
-
-- **When it is generated**: when `/api/render` or `GET /api/render/:id` returns `status: "done"` (every step's video is ready), the manifest gains a `share` field, and the QR code is saved to `output/qr/<id>.png`, `.svg` and `.txt` (the link), ready to print as a sticker. A lesson with no fal videos, where times are only estimated from the narration, also counts as "ready". No QR code is generated for red-line (`blocked`) guides.
-- **The link in the QR code**: `<public address>/?t=<id of the original guide>`. It uses the original id (`media_id`), so **all languages share one QR code** for the same appliance.
-- **Public address**: `PUBLIC_URL` in `.env` is used first; if it is empty, the address currently being visited is used, and when that is `localhost` it is replaced with the computer's LAN IP (phones on the same Wi-Fi can open it). Voice questions on a phone require https, so for the demo we recommend setting `PUBLIC_URL` to an ngrok address.
-- **After scanning**: the home page shows "Existing lesson: appliance name"; the user picks their language and taps "Start" to go straight into the lesson: **no photo, no recognition, no video regeneration**. Another language is translated once the first time it is opened, then read from cache. Ava can still take questions and jump as usual.
-
-| Endpoint | Description |
-|---|---|
-| `GET /api/qr/<id>.png` / `.svg` | The QR code image; `.png?download=1` downloads it directly |
-| `GET /api/guide/<id>?lang=zh` | Fetches the guide when opened from a scan (in this language); `guide.demoImage` points to the photo |
-| `GET /api/photo/<id>` | The appliance photo for this guide |
-
-```json
-"share": { "url": "https://xxxx.ngrok-free.app/?t=abc123", "qr_png": "/api/qr/abc123.png", "qr_svg": "/api/qr/abc123.svg", "secure": true }
-```
 
 ## 7. Data formats
 
@@ -373,7 +356,6 @@ All defined in `persona.js`. When English is chosen, Ava's English voice is used
 | Bilingual subtitles | Narration: the native language lights up character by character + English; Ava's improvised answers: Claude adds a line of English after she finishes |
 | Step markers | Each step is drawn on the player's progress bar from `chapters`; click one to jump there |
 | Lesson video export | The ● at the top right records, combining the photo, markers, digital human, subtitles and sound into MP4 / WebM |
-| QR code | When all lesson videos are ready, a ▦ button appears at the top right with a notice; open it to download / copy. Scanning goes straight into this lesson (see 6.5) |
 
 ---
 
@@ -390,7 +372,6 @@ All defined in `persona.js`. When English is chosen, Ava's English voice is used
 ├── public/             # Front end (no build step), includes demo-panel.svg
 ├── output/guides/      # Full guides; the file name is the tutorial_id
 ├── output/media/       # Each step's video clip and the joined full video
-├── output/qr/          # QR codes generated automatically once a lesson is ready (png / svg / link)
 ├── design/             # D: Figma links, screenshots
 ├── adaption/           # D: task description, train.jsonl, eval.jsonl, results.md, leaderboard screenshots
 └── docs/               # D: demo script, slides
@@ -412,7 +393,6 @@ Supported languages: 中文, English, Español, Tiếng Việt, 日本語, 한�
 | `ANAM_AVATAR_ID` / `ANAM_LLM_ID` | Change the digital human's avatar / Ava's conversation model |
 | `CLAUDE_MODEL` | Change the Claude model |
 | `PORT` | Port, default 8000 |
-| `PUBLIC_URL` | The public address in the QR code (e.g. an ngrok https address); if empty, the current address / LAN IP is used automatically |
 
 **Automatic rotation across several keys:** one service can have several keys (`NAME`, `NAME_2`, `NAME_3` …, see `.env.example`). The first is used first; when it runs out of credit / fails authentication / is rate-limited, the next one takes over automatically. JavaScript uses `keys.js` (`withKey` / `fetchWithKey`), Python uses `keyring.py` (`KeyRing`); Claude, Anam and fal are already wired up, and newly added services (ElevenLabs, Adaption) should go through these two files as well.
 
@@ -432,7 +412,7 @@ Supported languages: 中文, English, Español, Tiếng Việt, 日本語, 한�
 | 🚩 **20:00 sync** | A's page is interactive, B can handle real photos, C can produce each step's video | | | |
 | **20:00–23:00** | **Priority ③**: a question pauses automatically → Ava answers briefly → playback continues | **Priority ②**: `/api/ask` fetches context by `tutorial_id` and sends only the compact table of contents; inspector + safety red lines | **Priority ①**: join into a full video + step time markers; skip steps already generated | Start fine-tuning with AutoScientist (runs overnight); first draft of the slides; act as test user |
 | 🚩 **23:00 sync** | **Working end to end, rough is fine** | | | |
-| **Sun 9:00–12:00** | Jump / replay by step marker; keep the user company while waiting; apply the design | Polish Q&A; add a second language | Voice and lip sync for the second language; bilingual subtitles | Read the win rate and leaderboard, screenshot before/after examples, write `adaption/results.md`; QR-code page; final slides |
+| **Sun 9:00–12:00** | Jump / replay by step marker; keep the user company while waiting; apply the design | Polish Q&A; add a second language | Voice and lip sync for the second language; bilingual subtitles | Read the win rate and leaderboard, screenshot before/after examples, write `adaption/results.md`; final slides |
 | 🚩 **12:00 sync** | **Feature freeze, record the backup demo video** | | | |
 | **Sun afternoon** | Operate live | Prepare for technical Q&A | Bug fixes only | Lead presenter |
 
@@ -450,7 +430,7 @@ With these three done, multi-turn Q&A runs smoothly, and two kinds of cost are a
 
 1. A stable demo route: the same route runs 5 to 10 times without error; handle slow and failed cases. **For the washing machine used in the demo, generate all videos in advance.**
 2. Highlights: asking while watching, a second language, the red-line demo, the video frame.
-3. Only if there is time: generate while watching + queue-jumping for question steps, stop generating when the user leaves, the QR code, overall polish.
+3. Only if there is time: generate while watching + queue-jumping for question steps, stop generating when the user leaves, overall polish.
 
 The Adaption side track **does not compete for people** with the three levels above: fine-tuning runs in the background, and D only needs to collect the results and take screenshots on Sunday morning. If there are still no results by Sunday 11:00, the slides show the dataset and the evaluation method and say "fine-tuning in progress".
 
@@ -463,4 +443,4 @@ If it isn't working on Saturday night, Sunday morning is **integration only**, a
 1. **(30 s) The pain point**: an international student who has just arrived in London uses the washing machine in their hall for the first time; the panel is all English abbreviations, and they shrink a jumper.
 2. **(90 s) Live demo**: take a photo → Ava says in Chinese "one moment, I'm looking up the manual", and the screen shows the keywords being searched → the lesson video starts: the button is marked on the photo, the presenter explains in Chinese, with bilingual subtitles and step markers on the progress bar → the user asks "what does this button do?", the video pauses automatically, Ava circles the button and answers in one sentence, the video continues → the user asks "how do I wash wool?", Ava answers in one sentence and the video jumps straight to the matching step.
 3. **(30 s) Another person, another language**: switch the same washing machine to another language; then show a photo of a gas boiler being stopped by the red line.
-4. **(30 s) Business model and technology**: the photo is recognised only once and each step's video is generated only once, so every tenant shares the same washing machine's videos; halls and landlords use QR-code stickers; where each sponsor's tool is used; Adaption: one slide showing "generate data with Adaption → fine-tune a small model → how much the win rate improved / leaderboard rank", plus one before/after example, and a note that the next step is to use this small model to lower costs.
+4. **(30 s) Business model and technology**: the photo is recognised only once and each step's video is generated only once, so every tenant shares the same washing machine's videos; where each sponsor's tool is used; Adaption: one slide showing "generate data with Adaption → fine-tune a small model → how much the win rate improved / leaderboard rank", plus one before/after example, and a note that the next step is to use this small model to lower costs.
