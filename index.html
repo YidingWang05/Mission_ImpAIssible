@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f3d3e" />
+  <title>家电小老师</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- 共享的数字人视频（在欢迎页是大图，讲解时移动到画面角落做画中画） -->
+  <div id="avatar" class="avatar">
+    <video id="avatar-video" autoplay playsinline></video>
+    <div class="avatar-fallback" aria-hidden="true">
+      <img id="avatar-poster" alt="" />
+      <div class="voice-bars"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <span class="avatar-badge" id="avatar-state"></span>
+    <!-- 随时让 Ava 停下 / 接着说 -->
+    <button type="button" class="hush" id="btn-hush">⏸</button>
+  </div>
+
+  <!-- 1. 欢迎 -->
+  <section id="screen-welcome" class="screen active">
+    <header class="brand"><span class="logo">◎</span> <span data-t="appName">家电小老师</span></header>
+    <div class="hero" id="hero-slot"></div>
+    <div class="persona-card">
+      <div><b>Ava</b> · <span data-t="tutor">Appliance Tutor</span></div>
+      <div class="muted small">🗣️ Amanda – Warm Guide (EN) · 🧠 Qwen 3.8 27B · 🎭 Mia · cara-4</div>
+    </div>
+    <div class="card">
+      <label class="field">
+        <span>🌐 <span data-t="langLabel">Native language</span></span>
+        <select id="lang"></select>
+      </label>
+      <!-- 扫二维码打开时显示：这台家电的讲解已经做好，点“开始”直接进入讲解 -->
+      <div class="shared-note" id="shared-note" hidden>
+        <span class="shared-icon">▦</span>
+        <div><b id="shared-title"></b><span class="muted small" id="shared-sub"></span></div>
+      </div>
+      <button id="btn-start" class="primary big" data-t="start">开始</button>
+      <p class="muted small" id="demo-note" hidden></p>
+    </div>
+  </section>
+
+  <!-- 2. 拍照 -->
+  <section id="screen-capture" class="screen">
+    <header class="brand"><span class="logo">◎</span> <span data-t="appName">家电小老师</span></header>
+    <div class="capture-top">
+      <div class="hero small" id="hero-slot-2"></div>
+      <div class="bubble" id="greet-bubble"></div>
+    </div>
+    <p class="heard" hidden></p>
+    <div class="card">
+      <label class="photo-drop" id="photo-drop">
+        <input id="photo" type="file" accept="image/*" capture="environment" hidden />
+        <img id="photo-preview" alt="" hidden />
+        <span class="photo-cta"><span class="cam">📷</span><span data-t="takePhoto">拍面板照片</span></span>
+      </label>
+      <textarea id="question" class="text" rows="2" data-ph="questionPh"></textarea>
+      <button id="btn-analyze" class="primary big" data-t="analyze" disabled>开始讲解</button>
+      <button id="btn-sample" class="ghost" hidden>🍲 <span data-t="sampleMicrowave">Sample: microwave</span></button>
+      <button id="btn-sample-danger" class="ghost" hidden>🔥 <span data-t="sampleBoiler">Sample: gas boiler</span></button>
+      <div class="research" id="research" hidden>
+        <p class="research-title"><span class="spinner"></span><span id="research-text"></span></p>
+        <ul id="research-log"></ul>
+      </div>
+      <p class="error" id="capture-error" hidden></p>
+    </div>
+  </section>
+
+  <!-- 3. 讲解 -->
+  <section id="screen-lesson" class="screen">
+    <div class="lesson">
+      <div class="topbar">
+        <button class="icon" id="btn-back" data-tt="retake">←</button>
+        <div class="title"><b id="appliance-name"></b><span id="model-name"></span></div>
+        <span class="progress" id="progress"></span>
+        <!-- 讲解视频做好后出现：扫码下次直接打开这份讲解 -->
+        <button class="icon qr" id="btn-qr" hidden>▦</button>
+        <button class="icon rec" id="btn-rec" data-tt="record">●</button>
+      </div>
+
+      <!-- “视频画面”：真实照片 + 按钮标注 + 数字人画中画 + 双语字幕 -->
+      <div class="stage" id="stage">
+        <div class="photo-wrap" id="photo-wrap">
+          <!-- 放大某个按钮时，只缩放这一层（照片 + 标注） -->
+          <div class="zoomer" id="zoomer">
+            <img id="stage-img" alt="" />
+            <video id="stage-video" muted playsinline hidden></video>
+            <svg id="overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="pip" id="pip-slot"></div>
+          <div class="step-chip" id="step-chip"></div>
+          <div class="label-card" id="label-card" hidden></div>
+        </div>
+        <!-- 步骤时间标记：每一步一段，点一下跳过去 / 重播 -->
+        <div class="chapters" id="chapters" hidden>
+          <button class="play" id="btn-play" type="button">▶</button>
+          <div class="chapter-track" id="chapter-track"></div>
+        </div>
+        <div class="subs" id="subs">
+          <p class="sub-native" id="sub-native"></p>
+          <p class="sub-en" id="sub-en"></p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="danger" id="danger" role="alert" hidden>
+          <b>⚠️ <span id="danger-title"></span></b>
+          <p id="danger-native"></p>
+          <p id="danger-en" class="small"></p>
+        </div>
+        <div class="action" id="action"></div>
+        <div class="listen" id="listen"><span class="dot"></span><span id="listen-text"></span></div>
+        <p class="heard" hidden></p>
+        <div class="hint muted small" id="hint"></div>
+        <div class="chips">
+          <button class="chip" data-cmd="prev" data-t="prev">上一步</button>
+          <button class="chip" data-cmd="repeat" data-t="repeat">再说一遍</button>
+          <button class="chip" data-cmd="what" data-t="what">这个按钮是干什么的</button>
+          <button class="chip primary" data-cmd="next" data-t="next">下一步</button>
+        </div>
+        <form id="ask-form" class="ask">
+          <input id="ask" class="text" data-ph="askPh" autocomplete="off" />
+          <button class="icon send" data-tt="send">➤</button>
+        </form>
+        <p class="muted small tap-tip" data-t="tapTip"></p>
+        <details class="steps">
+          <summary data-t="steps">步骤</summary>
+          <ol id="step-list"></ol>
+        </details>
+        <details class="steps" id="sources-box">
+          <summary data-t="sources">资料来源</summary>
+          <ul id="source-list"></ul>
+        </details>
+        <a id="json-link" class="ghost json-link" download>⬇ <span data-t="json">下载步骤 JSON</span></a>
+        <a id="download" class="primary download" hidden></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 二维码弹窗 -->
+  <dialog id="qr-dialog" class="qr-dialog">
+    <form method="dialog" class="qr-card">
+      <b id="qr-title"></b>
+      <p class="muted small" id="qr-sub"></p>
+      <img id="qr-img" alt="QR code" width="260" height="260" />
+      <p class="qr-url" id="qr-url"></p>
+      <p class="error small" id="qr-warn" hidden></p>
+      <div class="qr-actions">
+        <a id="qr-download" class="primary" download></a>
+        <button type="button" class="ghost" id="qr-copy"></button>
+        <button class="ghost" id="qr-close">✕</button>
+      </div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="/vendor/anam.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
