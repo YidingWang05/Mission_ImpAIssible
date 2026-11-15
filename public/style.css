@@ -198,3 +198,9 @@ textarea.text { resize: vertical; min-height: 60px; font-family: inherit; }
 .danger p { margin: 6px 0 0; font-size: 16px; line-height: 1.5; }
 .danger p.small { font-size: 13px; opacity: .85; }
 .lesson.blocked .chips, .lesson.blocked .hint, .lesson.blocked .tap-tip, .lesson.blocked .steps, .lesson.blocked .json-link, .lesson.blocked #btn-rec { display: none; }
+
+/* 按住说话 */
+.ptt { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: pointer; }
+.ask .ptt { width: 48px; height: 48px; }
+.ptt.on { background: #d33; border-color: #d33; border-style: solid; color: #fff; animation: pulse 1.2s infinite; }
+.ptt.busy { opacity: 0.55; }

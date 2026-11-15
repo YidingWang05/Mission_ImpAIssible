@@ -83,6 +83,7 @@ async function init() {
   $("#btn-sample").onclick = () => analyze({ sample: "microwave" });
   $("#btn-sample-danger").onclick = () => analyze({ sample: "boiler" });
   $("#btn-play").onclick = togglePlay;
+  setupPtt();
   // 开始打字提问就自动暂停；什么都没问就接着播
   $("#ask").oninput = () => { if ($("#ask").value.trim() && lessonActive()) pauseForQuestion(); };
   $("#ask").onblur = () => {
@@ -259,7 +260,7 @@ async function sttStart(handlers) {
     node.onaudioprocess = (e) => {
       const h = mic.on;
       if (!h) return;
-      if (h.gate && !h.gate()) { rec = null; pre = []; loud = 0; return; } // Ava 自己在出声：不收音
+      if ((h.gate && !h.gate()) || ptt.rec) { rec = null; pre = []; loud = 0; return; } // Ava 自己在出声 / 用户正按着“按住说话”：不收音
       const d = new Float32Array(e.inputBuffer.getChannelData(0));
       let sum = 0;
       for (let i = 0; i < d.length; i++) sum += d[i] * d[i];
@@ -298,7 +299,7 @@ function sttStop() {
   mic.node = mic.src = null;
 }
 
-async function sttSend(blocks, rate, h) {
+async function sttTranscribe(blocks, rate) {
   // 拼起来 → 降到 16 kHz 单声道 → WAV
   const n = blocks.reduce((a, b) => a + b.length, 0);
   const all = new Float32Array(n);
@@ -320,7 +321,110 @@ async function sttSend(blocks, rate, h) {
     const r = await fetch(`/api/stt?hint=${state.reply.code}`, { method: "POST", headers: { "Content-Type": "audio/wav" }, body: v.buffer });
     if (r.ok) out = await r.json();
   } catch (e) { console.warn("stt", e); }
-  if (mic.on === h) h.onText?.(out.text || "", out.language || null);
+  return { text: out.text || "", language: out.language || null };
+}
+
+async function sttSend(blocks, rate, h) {
+  const out = await sttTranscribe(blocks, rate);
+  if (mic.on === h) h.onText?.(out.text, out.language);
+}
+
+// ---------- 按住说话（每个能输入文字的地方旁边都有一个 🎤）----------
+// 按住录音，松开识别；轻点一下 = 开始，再点一下 = 结束（不方便一直按着的时候用）。
+//   data-ptt="question"：拍照页，识别出的文字填进疑问框
+//   data-ptt="ask"：讲解页，当作用户说的话直接提问（讲解自动暂停）
+// 录音期间把 Ava 的麦克风静音，免得她同时也去回答一遍。
+const ptt = { rec: null, btn: null, t0: 0, latched: false };
+function setupPtt() {
+  document.querySelectorAll("[data-ptt]").forEach((btn) => {
+    const down = () => {
+      if (ptt.rec) { if (ptt.btn === btn && ptt.latched) pttStop(); return; }
+      pttStart(btn);
+    };
+    const up = () => {
+      if (ptt.btn !== btn || !ptt.rec || ptt.latched) return;
+      if (Date.now() - ptt.t0 < 350) { ptt.latched = true; return; } // 轻点：保持录音，等下一次点击
+      pttStop();
+    };
+    btn.addEventListener("pointerdown", (e) => { e.preventDefault(); try { btn.setPointerCapture(e.pointerId); } catch {} down(); });
+    btn.addEventListener("pointerup", up);
+    btn.addEventListener("pointercancel", up);
+    btn.addEventListener("contextmenu", (e) => e.preventDefault()); // 手机上长按不弹菜单
+    btn.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); down(); } });
+    btn.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); up(); } });
+  });
+}
+
+async function pttStart(btn) {
+  const rec = (ptt.rec = { blocks: [], rate: 16000, node: null, src: null, sr: null });
+  Object.assign(ptt, { btn, t0: Date.now(), latched: false });
+  btn.classList.add("on");
+  if (btn.dataset.ptt === "ask" && lessonActive()) {
+    pauseForQuestion();
+    clearTimeout(session.timer);
+    clearTimeout(player.timer);
+  }
+  state.avatar?.interrupt?.();
+  state.avatar?.muteMic?.(true);
+  if (!state.cfg.stt) return pttBrowser(rec);
+  try {
+    if (!mic.stream?.active) mic.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const ctx = (mic.ctx ||= new (window.AudioContext || window.webkitAudioContext)());
+    if (ctx.state === "suspended") await ctx.resume();
+    if (ptt.rec !== rec) return; // 等麦克风权限的时候已经松手了
+    rec.rate = ctx.sampleRate;
+    rec.src = ctx.createMediaStreamSource(mic.stream);
+    rec.node = ctx.createScriptProcessor(4096, 1, 1);
+    const silent = ctx.createGain();
+    silent.gain.value = 0;
+    rec.src.connect(rec.node); rec.node.connect(silent); silent.connect(ctx.destination);
+    rec.node.onaudioprocess = (e) => rec.blocks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  } catch (e) {
+    console.warn("microphone unavailable", e?.name || e);
+    if (ptt.rec === rec) { pttStop(); renderListen("off"); }
+  }
+}
+
+// 没有服务器语音识别时：用浏览器自带的（只认当前语言）
+function pttBrowser(rec) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { pttStop(); return renderListen("off"); }
+  const sr = new SR();
+  sr.lang = SR_LANG[state.reply.code] || state.reply.code;
+  let text = "";
+  rec.sr = sr;
+  rec.done = new Promise((resolve) => {
+    sr.onresult = (e) => { text = [...e.results].map((r) => r[0].transcript).join(" "); };
+    sr.onend = sr.onerror = () => resolve(text.trim());
+  });
+  try { sr.start(); } catch { pttStop(); }
+}
+
+async function pttStop() {
+  const rec = ptt.rec, btn = ptt.btn;
+  if (!rec) return;
+  ptt.rec = null;
+  btn.classList.remove("on");
+  try { rec.node?.disconnect(); rec.src?.disconnect(); } catch {}
+  if (rec.node) rec.node.onaudioprocess = null;
+  state.avatar?.muteMic?.(false);
+  const lesson = btn.dataset.ptt === "ask";
+  let text = "", heard = null;
+  btn.classList.add("busy");
+  if (lesson && lessonActive()) renderListen("thinking");
+  try {
+    if (rec.sr) { try { rec.sr.stop(); } catch {} text = await rec.done; }
+    else if ((rec.blocks.length * 4096) / rec.rate >= 0.3) ({ text, language: heard } = await sttTranscribe(rec.blocks, rec.rate));
+  } finally { btn.classList.remove("busy"); }
+  if (!lesson) {
+    if (text) { const q = $("#question"); q.value = (q.value.trim() ? q.value.trim() + " " : "") + text; }
+    return;
+  }
+  if (!lessonActive()) return;
+  if (text) return userSays(text, heard);
+  // 什么都没听到：回到原来的状态，接着播
+  renderListen(state.avatar?.listening ? "on" : state.avatar instanceof AnamAvatar && !state.avatar.connected ? "standby" : "off");
+  if (player.asking && state.mode !== "thinking" && state.mode !== "speaking") runAfter();
 }
 
 async function connectAvatar(opts) {
@@ -1226,6 +1330,9 @@ class AnamAvatar {
     this.#connectedAt = Date.now();
     if (this.listening) this.onListenChange?.("on");
   }
+
+  // 按住说话时把 Ava 自己的麦克风静音（那句话由我们识别），松开后恢复
+  muteMic(on) { try { on ? this.#client?.muteInputAudio() : this.#client?.unmuteInputAudio(); } catch {} }
 
   // 主动断开会话（Ava 说完了、没人接话）。之后 connect() 会开一个全新的会话。
   async disconnect() {
