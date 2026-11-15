@@ -80,13 +80,14 @@ async function init() {
     $("#demo-note").textContent = "演示模式 · " + parts.join("；");
     $("#demo-note").hidden = false;
   }
-  $("#btn-sample").hidden = !d.claude;
-  $("#btn-sample-danger").hidden = !d.claude;
+  // 示例按钮一直显示：微波炉（预生成好的视频 + 旁白，没有时服务器退回演示面板）、燃气锅炉（红线）
+  $("#btn-sample").hidden = false;
+  $("#btn-sample-danger").hidden = false;
 
   $("#btn-start").onclick = start;
   $("#photo").onchange = onPhoto;
   $("#btn-analyze").onclick = () => analyze();
-  $("#btn-sample").onclick = () => analyze({ sample: "washer" });
+  $("#btn-sample").onclick = () => analyze({ sample: "microwave" });
   $("#btn-sample-danger").onclick = () => analyze({ sample: "boiler" });
   $("#btn-play").onclick = togglePlay;
   // 开始打字提问就自动暂停；什么都没问就接着播

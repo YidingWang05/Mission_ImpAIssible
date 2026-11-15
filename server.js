@@ -174,7 +174,10 @@ app.post("/api/analyze", async (req, res) => {
   const send = (obj) => res.write(JSON.stringify(obj) + "\n");
 
   try {
-    if (!HAS_CLAUDE) {
+    // 红线示例（燃气锅炉）：有没有密钥都能演示
+    if (sample === "boiler") { send({ type: "status", stage: "safety" }); return await finish(send, res, { ...DEMO_DANGER_GUIDE(lang.code), demo: true }, lang); }
+    const demoGuide = sample === "microwave" ? await loadGuide(DEMO_MICROWAVE) : null;
+    if (!HAS_CLAUDE && !demoGuide) {
       send({ type: "status", stage: "safety" });
       if (sample === "boiler") return await finish(send, res, { ...DEMO_DANGER_GUIDE(lang.code), demo: true }, lang);
       send({ type: "status", stage: "research" });
@@ -183,8 +186,8 @@ app.post("/api/analyze", async (req, res) => {
     }
     // 预生成好的演示：微波炉（真实识别结果 + 已缓存的视频和旁白），台上直接读缓存，不再调用模型
     if (sample === "microwave") {
-      const g = await loadGuide(DEMO_MICROWAVE);
-      if (!g) throw new Error("demo guide missing");
+      const g = demoGuide;
+      if (!g) throw new Error("demo guide missing: run the analyze step once or set DEMO_GUIDE_ID");
       send({ type: "status", stage: "safety" });
       send({ type: "status", stage: "research" });
       for (const q of ["IKEA TILLREDA microwave manual", "TILLREDA 微波炉 使用说明"]) { send({ type: "search", tool: "web_search", query: q }); await new Promise((r) => setTimeout(r, 900)); }
@@ -461,6 +464,17 @@ async function photoOf(id) {
 const DEMO_MICROWAVE = process.env.DEMO_GUIDE_ID || "2026-11-15T01-20-02-074Z-75aecb";
 const DEMO_PHOTOS = { [DEMO_MICROWAVE]: path.join(here, "samples", "microwave.jpg") };
 
+// 找一个装了 Pillow + requests 的 Python（PATH 里第一个 python 不一定是对的）
+let pythonCmd;
+async function pickPython() {
+  if (pythonCmd !== undefined) return pythonCmd;
+  const { spawnSync } = await import("node:child_process");
+  const cands = [process.env.PYTHON, "python", "py -3", "python3", "C:/Python313/python.exe"].filter(Boolean).map((c) => c.split(" "));
+  pythonCmd = cands.find((c) => spawnSync(c[0], [...c.slice(1), "-c", "import PIL, requests"], { timeout: 20000 }).status === 0) || null;
+  console.log("render python:", pythonCmd?.join(" "));
+  return pythonCmd;
+}
+
 async function startRender(guide) {
   const id = guide.id;
   const job = jobs.get(id);
@@ -471,7 +485,9 @@ async function startRender(guide) {
   const prev = await scriptManifest(id);
   if (prev && prev.steps.length >= guide.steps.length) { const j = { status: "done", lastPoll: Date.now() }; jobs.set(id, j); return j; }
   const { spawn } = await import("node:child_process");
-  const proc = spawn(process.env.PYTHON || "python", ["generate_action_videos.py", "--guide", path.join(GUIDE_DIR, `${id}.json`), "--photo", photo, "--out", out, "--model", RENDER_MODEL],
+  const py = await pickPython();
+  if (!py) { console.error("render: no python with Pillow + requests found (set PYTHON=...)"); return null; }
+  const proc = spawn(py[0], [...py.slice(1), "generate_action_videos.py", "--guide", path.join(GUIDE_DIR, `${id}.json`), "--photo", photo, "--out", out, "--model", RENDER_MODEL],
     { cwd: here, env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
   const j = { proc, lastPoll: Date.now(), status: "rendering", error: null };
   let tail = "";
