@@ -212,6 +212,7 @@ async function startIdleListener() {
         if (session.rec !== token) return;
         if (!text) return renderListen("standby"); // 只是噪音
         stopIdleListener();
+        showHeard(text);
         userSays(text, heard);
       },
     });
@@ -226,6 +227,7 @@ async function startIdleListener() {
   rec.onresult = (e) => {
     const text = e.results[e.results.length - 1][0].transcript;
     stopIdleListener();
+    showHeard(text);
     userSays(text);
   };
   rec.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") stopIdleListener(); };
@@ -411,11 +413,13 @@ async function pttStop() {
   const lesson = btn.dataset.ptt === "ask";
   let text = "", heard = null;
   btn.classList.add("busy");
+  showHeard("…", true);
   if (lesson && lessonActive()) renderListen("thinking");
   try {
     if (rec.sr) { try { rec.sr.stop(); } catch {} text = await rec.done; }
     else if ((rec.blocks.length * 4096) / rec.rate >= 0.3) ({ text, language: heard } = await sttTranscribe(rec.blocks, rec.rate));
   } finally { btn.classList.remove("busy"); }
+  showHeard(text);
   if (!lesson) {
     if (text) { const q = $("#question"); q.value = (q.value.trim() ? q.value.trim() + " " : "") + text; }
     return;
@@ -583,6 +587,7 @@ async function enterLesson(imgSrc) {
   Object.assign(player, { playing: false, range: null, cursor: 0, after: null, asking: false, chapters: [] });
   $("#chapter-track").innerHTML = "";
   hideDanger();
+  showHeard("");
   clearZoom();
   drawOverlay({});
   // 步骤时间标记（真实视频做好前由服务端按讲解词长度估算）
@@ -1234,6 +1239,17 @@ async function explainButton(id) {
   runAfter();
 }
 
+// 语音识别的反馈：把听到（识别出）的话原样显示出来，用户能看到自己被听成了什么。
+// live = 还没说完 / 还在识别；文字用用户说的语言，前面的小标题用界面语言。
+function showHeard(text, live = false) {
+  text = String(text || "").trim();
+  document.querySelectorAll(".heard").forEach((el) => {
+    el.hidden = !text;
+    el.classList.toggle("live", live);
+    el.innerHTML = text ? `<small>🎙️ ${esc(state.lang.ui.heard)}</small>${esc(text)}` : "";
+  });
+}
+
 function renderListen(kind) {
   const el = $("#listen");
   const ui = state.lang.ui;
@@ -1299,6 +1315,13 @@ class AnamAvatar {
     c.addListener(AnamEvent.USER_SPEECH_STARTED, () => { if (!live()) return; this.onListenChange?.("hear"); this.onUserSpeech?.("start"); });
     c.addListener(AnamEvent.USER_SPEECH_ENDED, () => { if (!live()) return; this.#tail = false; this.onListenChange?.(this.listening ? "on" : "off"); this.onUserSpeech?.("end"); });
     c.addListener(AnamEvent.MESSAGE_STREAM_EVENT_RECEIVED, (ev) => {
+      if (live() && ev.role === "user") {
+        // Anam 自己听到的用户的话：一段一段到，按消息 id 拼起来
+        this.#heard = (this.#heardId === ev.id ? this.#heard : "") + (ev.content || "");
+        this.#heardId = ev.id;
+        showHeard(this.#heard, !ev.endOfSpeech);
+        return;
+      }
       if (!live() || ev.role !== "persona") return;
       const text = stripCues(ev.content || "");
       const end = ev.endOfSpeech || ev.interrupted;
@@ -1331,6 +1354,7 @@ class AnamAvatar {
     if (this.listening) this.onListenChange?.("on");
   }
 
+  #heard = ""; #heardId = null;
   // 按住说话时把 Ava 自己的麦克风静音（那句话由我们识别），松开后恢复
   muteMic(on) { try { on ? this.#client?.muteInputAudio() : this.#client?.unmuteInputAudio(); } catch {} }
 
@@ -1405,7 +1429,7 @@ class FallbackAvatar {
       this.#stt = await sttStart({
         gate: () => !this.#pending,
         onHear: () => this.onListenChange?.("hear"),
-        onText: (t, heard) => { this.onListenChange?.("on"); if (t) this.onUserText?.(t, heard); },
+        onText: (t, heard) => { this.onListenChange?.("on"); if (t) { showHeard(t); this.onUserText?.(t, heard); } },
       });
       if (this.#stt) { this.listening = true; return this.onListenChange?.("on"); }
     }
@@ -1416,7 +1440,7 @@ class FallbackAvatar {
     rec.continuous = true;
     rec.onresult = (e) => {
       const t = e.results[e.results.length - 1][0].transcript;
-      if (!this.#pending) this.onUserText?.(t); // 自己说话时不收音
+      if (!this.#pending) { showHeard(t); this.onUserText?.(t); } // 自己说话时不收音
     };
     rec.onstart = () => { this.listening = true; this.onListenChange?.("on"); };
     rec.onend = () => { this.listening = false; this.onListenChange?.("off"); setTimeout(() => { try { rec.start(); } catch {} }, 400); };

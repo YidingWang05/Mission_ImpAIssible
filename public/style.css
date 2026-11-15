@@ -204,3 +204,8 @@ textarea.text { resize: vertical; min-height: 60px; font-family: inherit; }
 .ask .ptt { width: 48px; height: 48px; }
 .ptt.on { background: #d33; border-color: #d33; border-style: solid; color: #fff; animation: pulse 1.2s infinite; }
 .ptt.busy { opacity: 0.55; }
+
+/* 语音识别的反馈：把听到的话显示出来 */
+.heard { margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); font-size: 15px; line-height: 1.4; }
+.heard small { display: block; color: var(--muted); font-size: 12px; }
+.heard.live { opacity: 0.7; font-style: italic; }
