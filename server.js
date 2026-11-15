@@ -16,6 +16,8 @@ import express from "express";
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
+import os from "node:os";
+import QRCode from "qrcode";
 import { fileURLToPath } from "node:url";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
@@ -36,8 +38,11 @@ await fs.mkdir(GUIDE_DIR, { recursive: true });
 await fs.mkdir(MEDIA_DIR, { recursive: true });
 const PHOTO_DIR = path.join(here, "output", "photos");
 await fs.mkdir(PHOTO_DIR, { recursive: true });
+const QR_DIR = path.join(here, "output", "qr"); // 讲解做好后自动生成的二维码（可以直接打印成贴纸）
+await fs.mkdir(QR_DIR, { recursive: true });
 
 const app = express();
+app.set("trust proxy", true); // 经过 ngrok 等 HTTPS 隧道时，用隧道的域名和 https 生成二维码链接
 app.use(express.json({ limit: "15mb" }));
 app.use(express.static(path.join(here, "public")));
 app.use("/media", express.static(MEDIA_DIR));
@@ -394,6 +399,7 @@ async function finish(send, res, guide, lang, image) {
     language: { code: lang.code, name: lang.english },
     safety: "ok", // 越过红线时被 content 里的 "blocked" 覆盖
     ...content,
+    ...(demoImage ? { demo_image: demoImage } : {}), // 演示面板没有真实照片：记下示例图，扫码打开时用
   };
   await fs.writeFile(path.join(GUIDE_DIR, `${id}.json`), JSON.stringify(file, null, 2));
   guides.set(id, file);
@@ -598,7 +604,7 @@ app.post("/api/render", async (req, res) => {
   const guide = await loadGuide(req.body?.tutorial_id || req.body?.guideId);
   if (!guide) return res.status(404).json({ error: "找不到这份步骤" });
   await startRender(guide); // priority_steps 收下但不插队（视频按 1→2→3 顺序生成）
-  res.json(await manifestOf(guide));
+  res.json(await withShare(req, guide, await manifestOf(guide)));
 });
 
 app.get("/api/render/:id", async (req, res) => {
@@ -606,7 +612,97 @@ app.get("/api/render/:id", async (req, res) => {
   if (!guide) return res.status(404).json({ error: "找不到这份步骤" });
   const j = jobs.get(mediaId(guide));
   if (j) j.lastPoll = Date.now();
-  res.json(await manifestOf(guide));
+  res.json(await withShare(req, guide, await manifestOf(guide)));
+});
+
+// =====================================================================================
+// 3.5 二维码：讲解视频做好后自动生成，扫码直接打开这台家电的讲解（不用重新拍照、不重新识别、不重新生成视频）
+// =====================================================================================
+// 二维码里的链接 = 公开地址 + /?t=<原始说明的编号>。用原始编号，所以同一台家电所有语言共用一张二维码；
+// 扫码的人在首页选自己的语言，服务器再给出那种语言的版本（翻译只做一次，之后读缓存）。
+// 公开地址：优先用 PUBLIC_URL（部署地址 / ngrok 地址）；没设就用这次请求的地址，
+// 是 localhost 时换成电脑的局域网 IP，同一个 Wi-Fi 下的手机也能打开。
+function lanIp() {
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const a of list || []) if (a.family === "IPv4" && !a.internal) return a.address;
+  }
+  return null;
+}
+function publicBase(req) {
+  if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL.replace(/\/+$/, "");
+  const host = req.get("host") || `localhost:${port}`;
+  const [name, p] = host.split(":");
+  if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(name)) {
+    const ip = lanIp();
+    if (ip) return `${req.protocol}://${ip}${p ? `:${p}` : ""}`;
+  }
+  return `${req.protocol}://${host}`;
+}
+const shareUrl = (req, guide) => `${publicBase(req)}/?t=${encodeURIComponent(mediaId(guide))}`;
+const canShare = (guide) => guide && guide.safety !== "blocked" && guide.recognized !== false && guide.steps?.length > 0;
+const QR_OPTS = { errorCorrectionLevel: "M", margin: 2, color: { dark: "#0f3d3e", light: "#ffffff" } };
+
+// 讲解全部做好（status = done）时，把二维码存到 output/qr/<编号>.png / .svg（每台家电只写一次，打印贴纸用）
+const qrSaved = new Map(); // 编号 → 写文件时用的链接
+async function saveQr(id, url) {
+  if (qrSaved.get(id) === url) return;
+  qrSaved.set(id, url);
+  try {
+    await QRCode.toFile(path.join(QR_DIR, `${id}.png`), url, { ...QR_OPTS, width: 1024 });
+    await fs.writeFile(path.join(QR_DIR, `${id}.svg`), await QRCode.toString(url, { ...QR_OPTS, type: "svg" }));
+    await fs.writeFile(path.join(QR_DIR, `${id}.txt`), url + "\n");
+    console.log(`qr ${id}: ${url}`);
+  } catch (e) {
+    qrSaved.delete(id);
+    console.error("qr", e?.message || e);
+  }
+}
+// 视频清单里加上 share：前端看到它就显示二维码按钮
+async function withShare(req, guide, m) {
+  if (m?.status !== "done" || !canShare(guide)) return m;
+  const id = mediaId(guide);
+  const url = shareUrl(req, guide);
+  saveQr(id, url);
+  return { ...m, share: { url, qr_png: `/api/qr/${id}.png`, qr_svg: `/api/qr/${id}.svg`, secure: url.startsWith("https://") } };
+}
+
+app.get("/api/qr/:file", async (req, res) => {
+  const [, id, ext] = req.params.file.match(/^([\w-]+)\.(png|svg)$/) || [];
+  const guide = id && (await loadGuide(id));
+  if (!canShare(guide)) return res.status(404).end();
+  const url = shareUrl(req, guide);
+  try {
+    if (ext === "svg") return res.type("image/svg+xml").send(await QRCode.toString(url, { ...QR_OPTS, type: "svg" }));
+    const png = await QRCode.toBuffer(url, { ...QR_OPTS, width: 1024 });
+    if (req.query.download) res.setHeader("Content-Disposition", `attachment; filename="homeguide-qr-${mediaId(guide)}.png"`);
+    res.type("image/png").send(png);
+  } catch (e) {
+    console.error("qr", e?.message || e);
+    res.status(500).end();
+  }
+});
+
+// 这份说明的照片（扫码打开时前端手里没有照片，从这里取）
+app.get("/api/photo/:id", async (req, res) => {
+  const guide = await loadGuide(req.params.id);
+  if (!guide) return res.status(404).end();
+  const base = (await loadGuide(mediaId(guide))) || guide;
+  const p = await photoOf(mediaId(guide));
+  if (p) return res.sendFile(p);
+  const demo = guide.demo_image || base.demo_image;
+  if (demo) return res.redirect(demo);
+  res.status(404).end();
+});
+
+// 扫码打开：按编号取出已有的说明（换成用户选的语言），前端直接进入讲解。不发照片、不调用识别。
+app.get("/api/guide/:id", async (req, res) => {
+  let guide = await loadGuide(req.params.id);
+  if (!canShare(guide)) return res.status(404).json({ error: "找不到这份讲解" });
+  const lang = LANGUAGES.find((l) => l.code === req.query.lang);
+  if (lang) {
+    try { guide = await inLanguage(guide, lang); } catch (e) { console.error("guide localize", e?.message || e); }
+  }
+  res.json({ guide: { ...guide, demoImage: `/api/photo/${mediaId(guide)}` }, file: `/guides/${guide.id}.json` });
 });
 
 // ElevenLabs 多语言旁白（Anam 不可用时讲解照样有声音；备用演示视频也用它）。

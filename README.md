@@ -205,6 +205,23 @@ flowchart LR
 
 ---
 
+### 6.5 二维码：扫码再看这份讲解
+
+- **什么时候生成**：`/api/render` 或 `GET /api/render/:id` 返回 `status: "done"` 时（每一步视频都做好了），清单里多一个 `share` 字段，同时把二维码存到 `output/qr/<编号>.png`、`.svg`、`.txt`（链接），可以直接打印成贴纸。没有 fal 视频、只按讲解词估算时间的讲解，也算"做好"。红线（`blocked`）的说明不生成二维码。
+- **二维码里的链接**：`<公开地址>/?t=<原始说明的编号>`。用原始编号（`media_id`），所以同一台家电**所有语言共用一张二维码**。
+- **公开地址**：优先用 `.env` 里的 `PUBLIC_URL`；不填就用当前访问的地址，是 `localhost` 时自动换成电脑的局域网 IP（同一个 Wi-Fi 的手机能打开）。手机上要语音提问必须是 https，演示时建议 `PUBLIC_URL` 填 ngrok 地址。
+- **扫码之后**：首页显示"已有讲解：家电名"，用户选自己的语言，点"开始"直接进入讲解：**不拍照、不识别、不重新生成视频**；别的语言第一次打开时翻译一次，之后读缓存。Ava 照常可以提问、跳转。
+
+| 接口 | 说明 |
+|---|---|
+| `GET /api/qr/<编号>.png` / `.svg` | 二维码图片；`.png?download=1` 直接下载 |
+| `GET /api/guide/<编号>?lang=zh` | 扫码打开时取说明（换成这种语言），`guide.demoImage` 指向照片 |
+| `GET /api/photo/<编号>` | 这份说明的家电照片 |
+
+```json
+"share": { "url": "https://xxxx.ngrok-free.app/?t=abc123", "qr_png": "/api/qr/abc123.png", "qr_svg": "/api/qr/abc123.svg", "secure": true }
+```
+
 ## 7. 数据格式
 
 ### 7.1 完整说明（`/api/analyze` 输出）
@@ -347,6 +364,7 @@ flowchart LR
 | 双语字幕 | 讲解词：母语逐字点亮 + 英文；Ava 的即兴回答：说完后由 Claude 补一行英文 |
 | 步骤标记 | 播放器进度条上按 `chapters` 画出每一步，点一下就跳过去 |
 | 讲解视频导出 | 右上角 ● 录制，把照片、标注、数字人、字幕和声音合成为 MP4 / WebM |
+| 二维码 | 讲解视频全部做好后，右上角出现 ▦ 按钮并弹出提示；点开可以下载 / 复制。扫码直接进入这份讲解（见 6.5） |
 
 ---
 
@@ -363,6 +381,7 @@ flowchart LR
 ├── public/             # 前端（无构建步骤），含 demo-panel.svg
 ├── output/guides/      # 完整说明，文件名是 tutorial_id
 ├── output/media/       # 每一步的视频片段和拼好的整段视频
+├── output/qr/          # 讲解做好后自动生成的二维码（png / svg / 链接）
 ├── design/             # D：Figma 链接、截图
 ├── adaption/           # D：任务描述、train.jsonl、eval.jsonl、results.md、排行榜截图
 └── docs/               # D：演示脚本、PPT
@@ -384,6 +403,7 @@ flowchart LR
 | `ANAM_AVATAR_ID` / `ANAM_LLM_ID` | 换数字人形象 / Ava 的对话模型 |
 | `CLAUDE_MODEL` | 换 Claude 模型 |
 | `PORT` | 端口，默认 8000 |
+| `PUBLIC_URL` | 二维码里的公开地址（如 ngrok 的 https 地址）；不填自动用当前地址 / 局域网 IP |
 
 **多个密钥自动轮换：** 同一个服务可以放多个密钥（`NAME`、`NAME_2`、`NAME_3` …，见 `.env.example`）。先用第一个，额度不足 / 鉴权失败 / 被限流时自动换下一个。JavaScript 用 `keys.js`（`withKey` / `fetchWithKey`），Python 用 `keyring.py`（`KeyRing`）；Claude、Anam、fal 已经接上，新接的服务（ElevenLabs、Adaption）也请走这两个文件。
 
