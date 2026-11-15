@@ -214,3 +214,7 @@ textarea.text { resize: vertical; min-height: 60px; font-family: inherit; }
 .hush { position: absolute; right: 8px; bottom: 8px; z-index: 3; width: 36px; height: 36px; border-radius: 50%; border: 0; background: #000a; color: #fff; font-size: 15px; display: grid; place-items: center; cursor: pointer; }
 .hush.on { background: var(--brand); }
 #screen-welcome .hush { display: none; }
+
+/* 步骤视频的来源说明 */
+.ai-credit { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); z-index: 2; background: #000a; color: #fff; padding: 3px 10px; border-radius: 999px; font: 500 11px/1.4 system-ui; white-space: nowrap; pointer-events: none; }
+.ai-credit[hidden] { display: none; }

@@ -1,6 +1,6 @@
 {
   "budget_usd": 12.0,
-  "total_usd": 2.24,
+  "total_usd": 2.52,
   "calls": [
     {
       "time": "2026-11-15T01:16:59",
@@ -57,6 +57,14 @@
       "est_usd": 0.28,
       "guide_id": "2026-11-15T01-20-02-074Z-75aecb",
       "step": 6
+    },
+    {
+      "time": "2026-11-15T11:09:09",
+      "model": "fal-ai/kling-video/v2.1/standard/image-to-video",
+      "seconds": 5,
+      "est_usd": 0.28,
+      "guide_id": "2026-11-15T11-09-04-261Z-eb2bea",
+      "step": 1
     }
   ]
 }

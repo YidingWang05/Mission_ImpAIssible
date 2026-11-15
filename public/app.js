@@ -738,6 +738,7 @@ async function pollRender(id) {
 function playClip(step) {
   const v = $("#stage-video");
   const url = step != null && player.clips?.[step];
+  $("#ai-credit").hidden = !url; // 只有画面上是生成的视频时才显示“由 Fal.ai 生成”
   if (!url) { v.pause(); v.hidden = true; return Promise.resolve(); }
   v.hidden = false;
   if (!v.src.endsWith(url)) v.src = url;

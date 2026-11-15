@@ -1,0 +1,441 @@
+{
+  "schema": "appliance-tutor/guide@2",
+  "id": "2026-11-15T11-09-04-261Z-eb2bea",
+  "tutorial_id": "2026-11-15T11-09-04-261Z-eb2bea",
+  "generated_at": "2026-11-15T11:09:04.262Z",
+  "language": {
+    "code": "en",
+    "name": "English"
+  },
+  "safety": "ok",
+  "recognized": true,
+  "appliance_native": "Built-in dishwasher",
+  "appliance_en": "Built-in dishwasher",
+  "brand": "Siemens",
+  "model": "iQ500 series, likely SN658D01NG or similar (exact model on the rating plate on the door edge)",
+  "model_confidence": "medium",
+  "goal_native": "Run a normal everyday wash",
+  "goal_en": "Run a normal everyday wash",
+  "intro_native": "This is a Siemens built-in dishwasher, probably from the iQ500 range. The buttons sit on the top edge of the door, so you only see them with the door open. Let's run a normal everyday wash together.",
+  "intro_en": "This is a Siemens built-in dishwasher, probably from the iQ500 range. The buttons sit on the top edge of the door, so you only see them with the door open. Let's run a normal everyday wash together.",
+  "buttons": [
+    {
+      "id": "b1",
+      "panel_text": "⏻ (circle with line)",
+      "name_native": "On/Off button",
+      "name_en": "On/Off button",
+      "function_native": "Turns the dishwasher on or off.",
+      "function_en": "Turns the dishwasher on or off.",
+      "box": {
+        "x": 132,
+        "y": 604,
+        "w": 17,
+        "h": 21
+      }
+    },
+    {
+      "id": "b2",
+      "panel_text": "Pot icon 70°",
+      "name_native": "Intensive 70°",
+      "name_en": "Intensive 70°",
+      "function_native": "For very dirty pots and pans.",
+      "function_en": "For very dirty pots and pans.",
+      "box": {
+        "x": 187,
+        "y": 601,
+        "w": 22,
+        "h": 37
+      }
+    },
+    {
+      "id": "b3",
+      "panel_text": "Auto 45°-65°",
+      "name_native": "Auto programme",
+      "name_en": "Auto programme",
+      "function_native": "The machine senses how dirty the dishes are and adjusts the wash.",
+      "function_en": "The machine senses how dirty the dishes are and adjusts the wash.",
+      "box": {
+        "x": 211,
+        "y": 601,
+        "w": 28,
+        "h": 37
+      }
+    },
+    {
+      "id": "b4",
+      "panel_text": "Eco 50°",
+      "name_native": "Eco 50°",
+      "name_en": "Eco 50°",
+      "function_native": "Saves the most energy and water for normal loads. Takes longer.",
+      "function_en": "Saves the most energy and water for normal loads. Takes longer.",
+      "box": {
+        "x": 242,
+        "y": 601,
+        "w": 18,
+        "h": 37
+      }
+    },
+    {
+      "id": "b5",
+      "panel_text": "Lips icon 50°",
+      "name_native": "Silence 50°",
+      "name_en": "Silence 50°",
+      "function_native": "A quiet wash, good for night time.",
+      "function_en": "A quiet wash, good for night time.",
+      "box": {
+        "x": 265,
+        "y": 601,
+        "w": 21,
+        "h": 37
+      }
+    },
+    {
+      "id": "b6",
+      "panel_text": "Wine glass 40°",
+      "name_native": "Glass 40°",
+      "name_en": "Glass 40°",
+      "function_native": "A gentle wash for glasses and delicate items.",
+      "function_en": "A gentle wash for glasses and delicate items.",
+      "box": {
+        "x": 295,
+        "y": 601,
+        "w": 21,
+        "h": 37
+      }
+    },
+    {
+      "id": "b7",
+      "panel_text": "1h 65°",
+      "name_native": "1-hour programme",
+      "name_en": "1-hour programme",
+      "function_native": "Cleans a normal load in about one hour.",
+      "function_en": "Cleans a normal load in about one hour.",
+      "box": {
+        "x": 322,
+        "y": 601,
+        "w": 22,
+        "h": 37
+      }
+    },
+    {
+      "id": "b8",
+      "panel_text": "Cups with arrows 45°",
+      "name_native": "Speed 45°",
+      "name_en": "Speed 45°",
+      "function_native": "A short wash for lightly dirty dishes.",
+      "function_en": "A short wash for lightly dirty dishes.",
+      "box": {
+        "x": 350,
+        "y": 601,
+        "w": 20,
+        "h": 37
+      }
+    },
+    {
+      "id": "b9",
+      "panel_text": "Shower icon, Setup 3 sec.",
+      "name_native": "Pre-rinse / Setup",
+      "name_en": "Pre-rinse / Setup",
+      "function_native": "Tap for a quick cold rinse. Hold 3 seconds to open settings like water hardness.",
+      "function_en": "Tap for a quick cold rinse. Hold 3 seconds to open settings like water hardness.",
+      "box": {
+        "x": 372,
+        "y": 601,
+        "w": 28,
+        "h": 40
+      }
+    },
+    {
+      "id": "b10",
+      "panel_text": "− ⏱ +",
+      "name_native": "Delay timer",
+      "name_en": "Delay timer",
+      "function_native": "Sets a later start time in hours. Also changes values in settings.",
+      "function_en": "Sets a later start time in hours. Also changes values in settings.",
+      "box": {
+        "x": 540,
+        "y": 612,
+        "w": 42,
+        "h": 22
+      }
+    },
+    {
+      "id": "b11",
+      "panel_text": "Box icon",
+      "name_native": "Zone option",
+      "name_en": "Zone option",
+      "function_native": "Probably gives the lower basket a stronger wash.",
+      "function_en": "Probably gives the lower basket a stronger wash.",
+      "box": {
+        "x": 593,
+        "y": 615,
+        "w": 17,
+        "h": 22
+      }
+    },
+    {
+      "id": "b12",
+      "panel_text": "vario Speed Plus",
+      "name_native": "varioSpeed Plus",
+      "name_en": "varioSpeed Plus",
+      "function_native": "Makes the wash shorter, but uses more energy and water.",
+      "function_en": "Makes the wash shorter, but uses more energy and water.",
+      "box": {
+        "x": 616,
+        "y": 609,
+        "w": 25,
+        "h": 41
+      }
+    },
+    {
+      "id": "b13",
+      "panel_text": "Bottle with +",
+      "name_native": "Rinse aid light",
+      "name_en": "Rinse aid light",
+      "function_native": "Lights up when rinse aid needs topping up.",
+      "function_en": "Lights up when rinse aid needs topping up.",
+      "box": {
+        "x": 650,
+        "y": 612,
+        "w": 15,
+        "h": 25
+      }
+    },
+    {
+      "id": "b14",
+      "panel_text": "Wavy arrows",
+      "name_native": "Salt light",
+      "name_en": "Salt light",
+      "function_native": "Lights up when dishwasher salt is low.",
+      "function_en": "Lights up when dishwasher salt is low.",
+      "box": {
+        "x": 678,
+        "y": 612,
+        "w": 16,
+        "h": 25
+      }
+    },
+    {
+      "id": "b15",
+      "panel_text": "Box with spray",
+      "name_native": "Water supply light",
+      "name_en": "Water supply light",
+      "function_native": "Probably lights up if water isn't coming in.",
+      "function_en": "Probably lights up if water isn't coming in.",
+      "box": {
+        "x": 703,
+        "y": 612,
+        "w": 19,
+        "h": 25
+      }
+    },
+    {
+      "id": "b16",
+      "panel_text": "Start, Reset 3 sec.",
+      "name_native": "Start / Reset",
+      "name_en": "Start / Reset",
+      "function_native": "Tap to start. Hold about 3 seconds to cancel.",
+      "function_en": "Tap to start. Hold about 3 seconds to cancel.",
+      "box": {
+        "x": 785,
+        "y": 627,
+        "w": 30,
+        "h": 30
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "button_id": null,
+      "action_native": "Load the dishes",
+      "action_en": "Load the dishes",
+      "narration_native": "First, put your dishes in the baskets. Make sure nothing stops the spray arms from turning. Keep big items away from the little detergent flap on the door.",
+      "narration_en": "First, put your dishes in the baskets. Make sure nothing stops the spray arms from turning. Keep big items away from the little detergent flap on the door.",
+      "sources": [
+        "https://www.manualslib.com/manual/3270158/Siemens-Sn658d01ng.html?page=18"
+      ]
+    },
+    {
+      "step": 2,
+      "button_id": null,
+      "action_native": "Add detergent",
+      "action_en": "Add detergent",
+      "narration_native": "Find the detergent box on the inside of the door. Put in one tab or some powder. Then close the lid until it clicks.",
+      "narration_en": "Find the detergent box on the inside of the door. Put in one tab or some powder. Then close the lid until it clicks.",
+      "sources": [
+        "https://www.manualslib.com/manual/3270158/Siemens-Sn658d01ng.html?page=18"
+      ]
+    },
+    {
+      "step": 3,
+      "button_id": "b1",
+      "action_native": "Press the On/Off button",
+      "action_en": "Press the On/Off button",
+      "narration_native": "Look at the black strip on the top edge of the door. On the left, just after the Siemens name, is a small circle with a line. Press it to switch the machine on.",
+      "narration_en": "Look at the black strip on the top edge of the door. On the left, just after the Siemens name, is a small circle with a line. Press it to switch the machine on.",
+      "sources": [
+        "https://www.manualslib.com/manual/3270158/Siemens-Sn658d01ng.html?page=18",
+        "https://www.manualslib.com/manual/1173916/Siemens-Sn-Series.html?page=13"
+      ]
+    },
+    {
+      "step": 4,
+      "button_id": "b4",
+      "action_native": "Press Eco 50°",
+      "action_en": "Press Eco 50°",
+      "narration_native": "Now choose a programme. Press the button marked Eco 50°, the third one in the row. It's the best choice for everyday dishes. If you're not sure how dirty they are, Auto, just to its left, works well too.",
+      "narration_en": "Now choose a programme. Press the button marked Eco 50°, the third one in the row. It's the best choice for everyday dishes. If you're not sure how dirty they are, Auto, just to its left, works well too.",
+      "sources": [
+        "https://www.manualslib.com/manual/3270158/Siemens-Sn658d01ng.html?page=18"
+      ]
+    },
+    {
+      "step": 5,
+      "button_id": "b16",
+      "action_native": "Press Start",
+      "action_en": "Press Start",
+      "narration_native": "Go to the right side of the strip and press the word Start. Just tap it, don't hold it. Holding it cancels the wash.",
+      "narration_en": "Go to the right side of the strip and press the word Start. Just tap it, don't hold it. Holding it cancels the wash.",
+      "sources": [
+        "https://www.manualslib.com/manual/3270158/Siemens-Sn658d01ng.html?page=18",
+        "https://www.manualslib.com/manual/1173916/Siemens-Sn-Series.html?page=12"
+      ]
+    },
+    {
+      "step": 6,
+      "button_id": null,
+      "action_native": "Close the door",
+      "action_en": "Close the door",
+      "narration_native": "Close the door firmly within a few seconds. The wash only runs when the door is shut. That's it, your dishes are washing!",
+      "narration_en": "Close the door firmly within a few seconds. The wash only runs when the door is shut. That's it, your dishes are washing!",
+      "sources": [
+        "https://www.manualslib.com/manual/3270158/Siemens-Sn658d01ng.html?page=18"
+      ]
+    }
+  ],
+  "tips": [
+    {
+      "native": "To cancel a wash, open the door, hold Start for about 3 seconds, then close the door. The water drains in about a minute.",
+      "en": "To cancel a wash, open the door, hold Start for about 3 seconds, then close the door. The water drains in about a minute."
+    },
+    {
+      "native": "If nothing happens after Start, check the door is fully shut and the water tap is on.",
+      "en": "If nothing happens after Start, check the door is fully shut and the water tap is on."
+    },
+    {
+      "native": "When it's finished, let it cool, then empty the bottom basket first so drips from the top don't land on clean dishes.",
+      "en": "When it's finished, let it cool, then empty the bottom basket first so drips from the top don't land on clean dishes."
+    },
+    {
+      "native": "Top up salt or rinse aid when their lights come on. The salt goes in the container under the bottom basket.",
+      "en": "Top up salt or rinse aid when their lights come on. The salt goes in the container under the bottom basket."
+    },
+    {
+      "native": "Clean the filters at the bottom of the tub now and then for better results.",
+      "en": "Clean the filters at the bottom of the tub now and then for better results."
+    }
+  ],
+  "warnings": [
+    {
+      "native": "Never put detergent in the salt container. It can ruin the water softener.",
+      "en": "Never put detergent in the salt container. It can ruin the water softener."
+    },
+    {
+      "native": "Keep children away from detergent and the open door. Put knives point-down or flat.",
+      "en": "Keep children away from detergent and the open door. Put knives point-down or flat."
+    },
+    {
+      "native": "For leaks, error codes, or any repair, don't open the machine. Contact Siemens official support or your landlord.",
+      "en": "For leaks, error codes, or any repair, don't open the machine. Contact Siemens official support or your landlord."
+    }
+  ],
+  "closing_native": "Well done! You've started a normal wash. Next time it's just: load, detergent, power, Eco, Start, and close the door.",
+  "closing_en": "Well done! You've started a normal wash. Next time it's just: load, detergent, power, Eco, Start, and close the door.",
+  "sources": [
+    {
+      "id": 1,
+      "title": "Siemens iQ500 SN95YX02CG - Dishwasher Manual",
+      "url": "https://www.manualslib.com/guide/3612507/siemens-iq500-sn95yx02cg-dishwasher-manual.html",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 2,
+      "title": "Dishwasher SIEMENS iQ500 SN457S01IS - User manual and instructions",
+      "url": "https://www.notice-facile.com/en/manual/1322723/siemens+iq500-sn457s01is",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 3,
+      "title": "Siemens iQ500 SN25ZI07CE - Dishwasher Manual",
+      "url": "https://www.manualslib.com/manual/3612489/Siemens-Iq500-Sn25zi07ce.html",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 4,
+      "title": "SIEMENS IQ500 DISHWASHER ➜ Instruction & User Manual",
+      "url": "https://www.dishwashermanuals.org/siemens-iq500-dishwasher/",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 5,
+      "title": "SIEMENS iQ500 Fully Integrated Dishwasher Owner’s Manual - Manuals+",
+      "url": "https://manuals.plus/siemens/iq500-fully-integrated-dishwasher-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 6,
+      "title": "Siemens iQ500 Instruction manual",
+      "url": "https://manualzz.com/doc/54400841/siemens-iq500-instruction-manual",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 7,
+      "title": "Siemens iQ500 Dishwasher Quick Reference Guide",
+      "url": "https://manuals.plus/m/fbc95ee95805beadc239cfd1f6323fa25fc0f138951fb823b0bfe4137c8e6fed",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 8,
+      "title": "iQ500 Fully-Integrated Dishwasher with varioSpeed Plus and Zeolith Drying Technology",
+      "url": "https://device.report/manuals/iq500-fully-integrated-dishwasher-variospeed-plus-zeolith",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 9,
+      "title": "Siemens iQ500 SN65ZX07CE Manual - User Manual",
+      "url": "https://teamplush.by/en/product/siemens-iq500-sn65zx07ce/",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 10,
+      "title": "Siemens SN658D01NG User Manual (Page 18 of 64)",
+      "url": "https://www.manualslib.com/manual/3270158/Siemens-Sn658d01ng.html?page=18",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 11,
+      "title": "Settings - Siemens SN SERIES Instruction Manual [Page 13]",
+      "url": "https://www.manualslib.com/manual/1173916/Siemens-Sn-Series.html?page=13",
+      "kind": "web",
+      "cited": false
+    },
+    {
+      "id": 12,
+      "title": "Time Setting; Initial Start-Up - Siemens SN SERIES Instruction Manual [Page 12]",
+      "url": "https://www.manualslib.com/manual/1173916/Siemens-Sn-Series.html?page=12",
+      "kind": "web",
+      "cited": false
+    }
+  ]
+}
