@@ -1,0 +1,27 @@
+{
+  "schema": "homeguide/action-videos@1",
+  "guide_id": "2026-11-14T21-37-34-994Z-536fda",
+  "language": {
+    "code": "en",
+    "name": "English"
+  },
+  "appliance_en": "Built-in dishwasher",
+  "video_model": "fal-ai/kling-video/v2.1/standard/image-to-video",
+  "planner": "anthropic (claude-sonnet-5-5)",
+  "chained": true,
+  "steps": [
+    {
+      "step": 1,
+      "file": "step_01.mp4",
+      "duration_s": 5.04,
+      "button_id": null,
+      "action_native": "Load the dishes",
+      "action_en": "Load the dishes",
+      "video_prompt": "Static locked-off camera. The white microwave keeps exactly its original look: opaque black glass door, closed, white control panel with two round knobs and a round button, no interior light. One hand from a person standing to the right enters the frame holding a clean white plate, slowly sets it on the speckled grey countertop right of the microwave, lets go, and leaves the frame. The plate stays still on the counter for the final second. The appliance, room and lighting do not change.",
+      "end_state": "The microwave is unchanged with its door closed and idle, and a white plate rests on the countertop beside it.",
+      "start_frame": "_fal\\start_01.jpg",
+      "fal_video_url": "https://v3b.fal.media/files/b/0ab280cd/SpsCH3FZtgwiBxZgf5ztf_output.mp4",
+      "trimmed_to_s": null
+    }
+  ]
+}
