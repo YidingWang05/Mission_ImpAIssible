@@ -1,4 +1,4 @@
-# HomeGuide: take one photo, learn your appliance in your own language
+# SnapGuide: take one photo, learn your appliance in your own language
 
 > Imperial AI Hackathon 2026 · Main track 02 Voice, Vision & Generative Media
 > Sponsor prizes: **fal** + **Anam**　｜　Cross-track prizes: **Adaption**, **Figma**
