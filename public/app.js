@@ -8,7 +8,8 @@ const $ = (s) => document.querySelector(s);
 
 const state = {
   cfg: null,
-  lang: null,
+  lang: null,          // 用户在首页选的语言：界面文字一直用它
+  reply: null,         // Ava 说话和字幕用的语言：一开始等于 lang，之后跟着用户提问的语言走（自动检测）
   avatar: null,        // AnamAvatar（真实数字人）或 FallbackAvatar（演示）
   photo: null,         // { dataUrl, base64, mediaType }
   question: "",        // 用户对家电的疑问（不参与识别，讲解时交给 Ava）
@@ -111,6 +112,7 @@ async function init() {
 
 function applyLang(code) {
   state.lang = state.cfg.languages.find((l) => l.code === code);
+  state.reply = state.lang;
   const ui = state.lang.ui;
   document.documentElement.lang = code;
   document.documentElement.dir = state.lang.rtl ? "rtl" : "ltr";
@@ -198,11 +200,28 @@ function standby() {
 }
 
 // 待机时没有 Anam 的麦克风，用浏览器自带的语音识别听用户说话；听到就交给 userSays（会自动开新会话）
-function startIdleListener() {
+async function startIdleListener() {
+  if (session.rec) return;
+  // 优先用服务器的语音识别（所有浏览器都能用，自动识别语言）；没有密钥或没有麦克风权限时退回浏览器自带的
+  if (state.cfg.stt) {
+    const token = (session.rec = { abort: sttStop });
+    const ok = await sttStart({
+      onHear: () => renderListen("hear"),
+      onText: (text, heard) => {
+        if (session.rec !== token) return;
+        if (!text) return renderListen("standby"); // 只是噪音
+        stopIdleListener();
+        userSays(text, heard);
+      },
+    });
+    if (session.rec !== token) { if (!session.rec) sttStop(); return; } // 等麦克风的时候已经不在待机了
+    if (ok) return;
+    session.rec = null;
+  }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR || session.rec) return;
   const rec = new SR();
-  rec.lang = SR_LANG[state.lang.code] || state.lang.code;
+  rec.lang = SR_LANG[state.reply.code] || state.reply.code;
   rec.onresult = (e) => {
     const text = e.results[e.results.length - 1][0].transcript;
     stopIdleListener();
@@ -220,6 +239,90 @@ function stopIdleListener() {
   try { rec?.abort(); } catch {}
 }
 
+// ---------- 语音识别：录下用户说的一句话 → /api/stt（ElevenLabs Scribe，自动识别语言）----------
+// 一直听麦克风的音量：声音明显高过环境噪音就开始录，安静 0.9 秒算说完，把这一句发给服务器。
+// 开头留 0.3 秒的预录，第一个字不会被切掉。handlers: { gate?, onHear?, onText(text, language) }
+const mic = { stream: null, ctx: null, src: null, node: null, on: null };
+async function sttStart(handlers) {
+  sttStop();
+  try {
+    if (!mic.stream?.active) mic.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const ctx = (mic.ctx ||= new (window.AudioContext || window.webkitAudioContext)());
+    if (ctx.state === "suspended") await ctx.resume();
+    const src = (mic.src = ctx.createMediaStreamSource(mic.stream));
+    const node = (mic.node = ctx.createScriptProcessor(4096, 1, 1));
+    const silent = ctx.createGain();
+    silent.gain.value = 0; // 只分析，不把麦克风的声音放出来
+    src.connect(node); node.connect(silent); silent.connect(ctx.destination);
+    const blockMs = (4096 / ctx.sampleRate) * 1000;
+    let floor = 0.01, pre = [], rec = null, quiet = 0, loud = 0;
+    node.onaudioprocess = (e) => {
+      const h = mic.on;
+      if (!h) return;
+      if (h.gate && !h.gate()) { rec = null; pre = []; loud = 0; return; } // Ava 自己在出声：不收音
+      const d = new Float32Array(e.inputBuffer.getChannelData(0));
+      let sum = 0;
+      for (let i = 0; i < d.length; i++) sum += d[i] * d[i];
+      const rms = Math.sqrt(sum / d.length);
+      const voiced = rms > Math.max(0.015, floor * 3);
+      if (!rec) {
+        if (!voiced) floor = floor * 0.95 + rms * 0.05; // 跟着环境噪音慢慢调整
+        pre.push(d);
+        if (pre.length > 4) pre.shift();
+        loud = voiced ? loud + 1 : 0;
+        if (loud >= 2) { rec = pre; pre = []; quiet = 0; h.onHear?.(); }
+        return;
+      }
+      rec.push(d);
+      quiet = voiced ? 0 : quiet + 1;
+      const total = rec.length * blockMs, tail = quiet * blockMs;
+      if (tail < 900 && total < 15000) return;
+      const blocks = rec;
+      rec = null; loud = 0;
+      if (total - tail < 300) return h.onText?.("", null); // 太短：咳嗽、碰到桌子
+      sttSend(blocks, ctx.sampleRate, h);
+    };
+    mic.on = handlers;
+    return true;
+  } catch (e) {
+    console.warn("microphone unavailable", e?.name || e);
+    sttStop();
+    return false;
+  }
+}
+
+function sttStop() {
+  mic.on = null;
+  try { mic.node?.disconnect(); mic.src?.disconnect(); } catch {}
+  if (mic.node) mic.node.onaudioprocess = null;
+  mic.node = mic.src = null;
+}
+
+async function sttSend(blocks, rate, h) {
+  // 拼起来 → 降到 16 kHz 单声道 → WAV
+  const n = blocks.reduce((a, b) => a + b.length, 0);
+  const all = new Float32Array(n);
+  let o = 0;
+  for (const b of blocks) { all.set(b, o); o += b.length; }
+  const k = rate / 16000, m = Math.floor(n / k);
+  const v = new DataView(new ArrayBuffer(44 + m * 2));
+  const str = (at, s) => { for (let i = 0; i < s.length; i++) v.setUint8(at + i, s.charCodeAt(i)); };
+  str(0, "RIFF"); v.setUint32(4, 36 + m * 2, true); str(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 16000, true); v.setUint32(28, 32000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, "data"); v.setUint32(40, m * 2, true);
+  for (let i = 0; i < m; i++) {
+    const a = Math.floor(i * k), b = Math.min(n, Math.max(a + 1, Math.floor((i + 1) * k)));
+    let s = 0;
+    for (let j = a; j < b; j++) s += all[j];
+    v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, s / (b - a))) * 0x7fff, true);
+  }
+  let out = {};
+  try {
+    const r = await fetch(`/api/stt?hint=${state.reply.code}`, { method: "POST", headers: { "Content-Type": "audio/wav" }, body: v.buffer });
+    if (r.ok) out = await r.json();
+  } catch (e) { console.warn("stt", e); }
+  if (mic.on === h) h.onText?.(out.text || "", out.language || null);
+}
+
 async function connectAvatar(opts) {
   const make = (Cls) => {
     const a = new Cls();
@@ -234,14 +337,14 @@ async function connectAvatar(opts) {
   if (!state.cfg.demo.avatar) {
     const a = state.avatar instanceof AnamAvatar ? state.avatar : make(AnamAvatar);
     try {
-      await a.connect({ lang: state.lang, ...opts });
+      await a.connect({ lang: state.reply, ...opts });
       return a;
     } catch (e) {
       console.warn("数字人连接失败，改用演示数字人", e);
     }
   }
   const f = state.avatar instanceof FallbackAvatar ? state.avatar : make(FallbackAvatar);
-  await f.connect({ lang: state.lang });
+  await f.connect({ lang: state.reply });
   return f;
 }
 
@@ -498,7 +601,7 @@ async function goto(i, { keepRange = false } = {}) {
     player.range = null;
     player.playing = false;
     renderChapters();
-    await speakLine(state.lang.ui.more, "Any other questions?");
+    await speakLine(state.reply.ui.more, "Any other questions?");
     if (gen !== state.gen) return;
     return waitForUser();
   }
@@ -805,7 +908,7 @@ function onFreeSpeech(chunk, end) {
   if (!said) return;
   state.history.push({ role: "assistant", content: said });
   const gen = state.gen;
-  if (state.lang.code !== "en") {
+  if (state.reply.code !== "en") {
     fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: said }) })
       .then((r) => r.json())
       .then(({ en }) => { if ($("#sub-native").textContent === said) setSubs(said, en, said.length); })
@@ -858,7 +961,7 @@ function onTool(name, args) {
 }
 
 // /api/ask：只发 tutorial_id + 问题 + 当前在第几步（不发照片，也不发完整说明）
-async function ask(question) {
+async function ask(question, heard) {
   const r = await fetch("/api/ask", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -866,11 +969,47 @@ async function ask(question) {
       tutorial_id: state.guide.id,
       question,
       current_step: Math.max(1, Math.min(state.step + 1, Math.max(1, steps().length))),
-      language: state.lang.code,
+      language: state.reply.code, // 当前对话用的语言；服务器会检测这句话的语言并在 reply_language 里返回
+      heard_language: heard || undefined, // 语音识别听出来的语言（打字时没有）
     }),
   });
   if (!r.ok) throw new Error(`ask ${r.status}`);
   return r.json();
+}
+
+// ---------- 自动语言检测 ----------
+// /api/ask 返回 reply_language（用户这句话的语言）。和当前不一样就切过去：
+//   · Ava 的声音和听写语言是每个会话定好的，所以断开会话，下一句话开口前会用新语言重新连上；
+//   · 讲解内容（步骤、字幕、旁白）在后台换成这种语言的版本，视频共用；
+//   · 界面上的按钮、提示仍然是首页选的语言。
+// 返回 true 表示语言变了。
+async function followLanguage(code) {
+  const l = state.cfg.languages.find((x) => x.code === code);
+  if (!l || l.code === state.reply.code) return false;
+  state.reply = l;
+  stopIdleListener();
+  if (state.avatar instanceof AnamAvatar) await state.avatar.disconnect();
+  else await state.avatar.connect({ lang: l });
+  switchGuide(l);
+  return true;
+}
+
+async function switchGuide(l) {
+  const g0 = state.guide;
+  if (!g0 || blocked() || g0.language?.code === l.code) return;
+  try {
+    const r = await fetch("/api/localize", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tutorial_id: g0.id, lang: l.code }) });
+    if (!r.ok) return;
+    const g = await r.json();
+    // 等翻译的时候用户可能已经换了讲解或又换了语言
+    if (state.guide !== g0 || state.reply.code !== l.code || g.steps?.length !== g0.steps.length) return;
+    state.guide = { ...g, demoImage: g0.demoImage, demo: g0.demo };
+    state.guideFile = `/guides/${g.id}.json`;
+    $("#json-link").href = state.guideFile;
+    $("#appliance-name").textContent = g.appliance_native === g.appliance_en ? g.appliance_native : `${g.appliance_native} · ${g.appliance_en}`;
+    renderStepList();
+    renderChapters();
+  } catch (e) { console.warn("switchGuide", e); }
 }
 
 // 按 /api/ask 的结果操作画面，并记下回答说完后要做什么
@@ -902,11 +1041,22 @@ async function askTool(question) {
   renderListen(state.avatar.listening ? "on" : "off");
   if (!a) return "The lookup failed. Tell the user you are not sure and suggest the official manual.";
   applyAnswer(a);
+  if (await followLanguage(a.reply_language)) {
+    // 语言变了：这个会话的声音还是原来的语言，已经断开；用新语言的会话把回答念出来
+    const gen = ++state.gen;
+    (async () => {
+      const result = a.answer_native ? await speakLine(a.answer_native, a.answer_en) : "done";
+      if (gen !== state.gen || result === "interrupted") return;
+      await sleep(a.zoom ? 1500 : 400);
+      if (gen === state.gen) runAfter();
+    })();
+    return "Stay silent.";
+  }
   return `Say exactly this to the user and nothing else: "${a.answer_native}"`;
 }
 
 // 打字提问、拍照时写的疑问、演示模式的语音：直接问 /api/ask，由 Ava 照念回答
-async function answerQuestion(question) {
+async function answerQuestion(question, heard) {
   if (!state.guide) return;
   pauseForQuestion();
   state.avatar.interrupt();
@@ -915,13 +1065,15 @@ async function answerQuestion(question) {
   state.mode = "thinking";
   renderListen("thinking");
   let a = null;
-  try { a = await ask(question); } catch (e) { console.error(e); }
+  try { a = await ask(question, heard); } catch (e) { console.error(e); }
   if (gen !== state.gen) return;
   state.mode = "idle";
   renderListen(state.avatar.listening ? "on" : "off");
   if (!a) return runAfter();
   if (a.nav) return command({ next: "next", previous: "prev", repeat: "repeat" }[a.nav]);
   applyAnswer(a);
+  await followLanguage(a.reply_language); // 用户换了语言：声音和字幕跟着换
+  if (gen !== state.gen) return;
   const result = a.answer_native ? await speakLine(a.answer_native, a.answer_en) : "done";
   if (gen !== state.gen || result === "interrupted") return; // 用户又开口了：等下一轮回答
   await sleep(a.zoom ? 1500 : 400);
@@ -937,12 +1089,12 @@ const QUICK = {
   prev: /上一步|上一个|返回|\bback\b|previous|anterior|quay lại|前へ|もどる|이전|précédent|السابق|पिछला/i,
 };
 
-function userSays(text) {
+function userSays(text, heard) {
   text = String(text || "").trim();
   if (!text || !state.guide || !lessonActive()) return;
   state.history.push({ role: "user", content: text });
   if (text.length <= 14 && !blocked()) for (const [cmd, re] of Object.entries(QUICK)) if (re.test(text)) return command(cmd);
-  answerQuestion(text);
+  answerQuestion(text, heard);
 }
 
 async function command(cmd, { fromTap = false } = {}) {
@@ -1136,9 +1288,20 @@ class FallbackAvatar {
   speaksGreetingItself = false;
   #pending = null; #lang = "en"; #rec = null;
 
+  #stt = false;
   async connect({ lang }) {
     this.#lang = lang.code;
     speechSynthesis.getVoices();
+    if (this.#stt) return this.onListenChange?.("on");
+    if (state.cfg.stt && !this.#rec) {
+      // 服务器语音识别（自动识别语言）；自己出声的时候不收音
+      this.#stt = await sttStart({
+        gate: () => !this.#pending,
+        onHear: () => this.onListenChange?.("hear"),
+        onText: (t, heard) => { this.onListenChange?.("on"); if (t) this.onUserText?.(t, heard); },
+      });
+      if (this.#stt) { this.listening = true; return this.onListenChange?.("on"); }
+    }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR || this.#rec) return this.onListenChange?.(this.listening ? "on" : "off");
     const rec = (this.#rec = new SR());

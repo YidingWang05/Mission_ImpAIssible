@@ -15,7 +15,8 @@ import { dangerReply } from "./safety.js";
 
 export const AskSchema = z.object({
   intent: z.enum(["how_to_use", "label", "function", "other", "unsure", "danger"]),
-  answer_native: z.string().describe("one or two short spoken sentences in the user's native language"),
+  question_language: z.string().describe("ISO 639-1 code of the language the QUESTION is written in, e.g. zh, en, es; the conversation language if it cannot be told"),
+  answer_native: z.string().describe("one or two short spoken sentences in the reply language (see LANGUAGE rule)"),
   answer_en: z.string().describe("the same answer in English, for subtitles"),
   button_id: z.string().nullable().describe("id of the button the answer is about, or null"),
   play_from: z.number().int().nullable().describe("first step to play (1-based), only for intent=function"),
@@ -33,7 +34,8 @@ Pick exactly one intent:
 - danger: repairs, opening the casing, gas, wiring or electrical faults, smoke or burning smells, bypassing safety locks. Do not explain anything; the app shows its own safety message.
 
 "This button" / "this one" means the current step's button unless the user names another.
-answer_native is spoken aloud by a friendly tutor: one or two short sentences, in the user's native language, no lists. For how_to_use and function, just say in one sentence what you are about to show. Speech recognition may contain mistakes; pick the most sensible meaning.`;
+LANGUAGE rule: detect the language the QUESTION itself is written in and put its code in question_language. Write answer_native in that language when it is one of the supported languages listed in the message; otherwise write it in the conversation language. If the question is too short or ambiguous to tell (a number, a name, "ok", a word copied from the panel), treat it as the conversation language. Words quoted from the appliance's panel do not count as the question's language.
+answer_native is spoken aloud by a friendly tutor: one or two short sentences, no lists. For how_to_use and function, just say in one sentence what you are about to show. Speech recognition may contain mistakes; pick the most sensible meaning.`;
 
 // ---------------------------------------------------------------- 精简目录
 export function catalog(guide) {

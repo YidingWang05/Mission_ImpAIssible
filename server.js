@@ -23,6 +23,7 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { LANGUAGES } from "./languages.js";
 import { keysFor, withKey, fetchWithKey, isKeyError } from "./keys.js";
 import { localizeGuide } from "./localize.js";
+import { detectLang } from "./detect.js";
 import { PERSONA, greetPrompt, lessonPrompt, LESSON_TOOLS } from "./persona.js";
 import { DEMO_GUIDE, DEMO_DANGER_GUIDE } from "./demo.js";
 import { TriageSchema, TRIAGE_SYSTEM, blockedGuide, classifyDanger, dangerReply } from "./safety.js";
@@ -85,6 +86,7 @@ app.get("/api/config", (_req, res) => {
     persona: { name: PERSONA.name, image: PERSONA.image, avatarId: PERSONA.avatarId, voiceId: PERSONA.voiceId, llmId: PERSONA.llmId },
     languages: LANGUAGES.map(({ code, name, english, greeting, ui, rtl }) => ({ code, name, english, greeting, ui, rtl: !!rtl })),
     demo: { claude: !HAS_CLAUDE, avatar: !HAS_ANAM },
+    stt: keysFor("ELEVENLABS_API_KEY").length > 0, // 有 ElevenLabs 密钥：语音识别走 /api/stt（自动识别语言）
     // 数字人会话：Anam 每个会话有时长上限（Free 套餐 3 分钟）。前端按“段”续会话，说完就断开待机。
     session: {
       limitSeconds: Number(process.env.ANAM_SESSION_LIMIT_SECONDS ?? 180), // 0 = 不限制，不主动续会话
@@ -264,8 +266,11 @@ async function translateTexts(texts, lang) {
   return msg.stop_reason === "refusal" ? null : msg.parsed_output?.translations?.map((t) => t.replace(/^\d+\.\s*/, "")) || null;
 }
 async function inLanguage(guide, lang) {
-  if (guide.language?.code === lang.code) return guide;
+  if (guide.language?.code === lang.code || guide.safety === "blocked") return guide;
   const base = guide.media_id || guide.id;
+  // 已经是翻译出来的版本：回到原始那份再翻，原始语言直接用原文
+  if (base !== guide.id) guide = (await loadGuide(base)) || guide;
+  if (guide.language?.code === lang.code) return guide;
   // 翻译失败（没有密钥 / 模型出错）就退回英文版，英文版不需要调用模型
   for (const target of lang.code === "en" ? [lang] : [lang, langOf("en")]) {
     const id = `${base}-${target.code}`;
@@ -648,6 +653,60 @@ app.get("/api/narration/:id/:step", async (req, res) => {
   sendTts(res, en ? s.narration_en : s.narration_native);
 });
 
+// 语音识别：浏览器录下用户说的一句话（16 kHz WAV）发到这里，用 ElevenLabs Scribe 转成文字。
+// Scribe 会自己判断语言，所以用户不用先选对语言；返回 { text, language }（language 只在有把握时给出）。
+// hint = 当前对话的语言：句子太短、语言没把握时，按这个语言再识别一次，避免把“下一步”听成别的语言。
+const STT_MODEL = process.env.ELEVENLABS_STT_MODEL || "scribe_v1";
+const STT_LANG = { eng: "en", zho: "zh", cmn: "zh", yue: "zh", spa: "es", vie: "vi", jpn: "ja", kor: "ko", fra: "fr", ara: "ar", hin: "hi", por: "pt" };
+const STT_CODE = { en: "eng", zh: "zho", es: "spa", vi: "vie", ja: "jpn", ko: "kor", fr: "fra", ar: "ara", hi: "hin", pt: "por" };
+async function transcribe(audio, type, languageCode) {
+  const r = await fetchWithKey("ELEVENLABS_API_KEY", (key) => {
+    const fd = new FormData();
+    fd.append("model_id", STT_MODEL);
+    fd.append("tag_audio_events", "false");
+    if (languageCode) fd.append("language_code", languageCode);
+    fd.append("file", new Blob([audio], { type }), "speech.wav");
+    return fetch("https://api.elevenlabs.io/v1/speech-to-text", { method: "POST", headers: { "xi-api-key": key }, body: fd });
+  });
+  if (!r.ok) throw new Error(`elevenlabs stt ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  return r.json();
+}
+app.post("/api/stt", express.raw({ type: () => true, limit: "8mb" }), async (req, res) => {
+  if (!keysFor("ELEVENLABS_API_KEY").length) return res.status(503).json({ error: "no ElevenLabs key" });
+  const audio = req.body;
+  if (!Buffer.isBuffer(audio) || audio.length < 4000) return res.json({ text: "", language: null });
+  const type = req.headers["content-type"] || "audio/wav";
+  const hint = STT_CODE[String(req.query.hint || "")];
+  const clean = (t) => String(t || "").replace(/\([^)]*\)|\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim(); // 去掉 (笑声) 这类标注
+  try {
+    let out = await transcribe(audio, type);
+    let language = STT_LANG[out.language_code] || null;
+    const sure = language && (out.language_probability ?? 0) >= 0.6;
+    if (!sure) {
+      language = null;
+      if (hint && out.language_code !== hint) out = await transcribe(audio, type, hint);
+    }
+    const text = clean(out.text);
+    // 文字本身的写法比声音更可靠（只有汉字的短句常被听成日文）；太短的一句话不足以判断，不换语言
+    const script = detectLang(text);
+    if (["zh", "ja", "ko", "ar", "hi"].includes(script)) language = language && script;
+    const long = /[぀-ヿ一-鿿가-힯]/.test(text) ? text.length >= 6 : text.split(/\s+/).length >= 3;
+    res.json({ text, language: long ? language : null });
+  } catch (e) {
+    console.error("stt", e?.message || e);
+    res.status(502).json({ error: "stt failed" });
+  }
+});
+
+// 讲解中途换语言（用户改用另一种语言提问）：返回同一份说明的那种语言版本，视频共用
+app.post("/api/localize", async (req, res) => {
+  const guide = await loadGuide(req.body?.tutorial_id);
+  const lang = LANGUAGES.find((l) => l.code === req.body?.lang);
+  if (!guide || !lang) return res.status(404).json({ error: "not found" });
+  try { res.json(await inLanguage(guide, lang)); }
+  catch (e) { console.error("localize", e?.message || e); res.status(500).json({ error: "failed" }); }
+});
+
 // 问答：只收 tutorial_id，不收照片、不收完整说明
 app.post("/api/ask", async (req, res) => {
   const b = req.body || {};
@@ -657,7 +716,12 @@ app.post("/api/ask", async (req, res) => {
   const question = String(b.question || "").trim().slice(0, 500);
   const current = Math.max(1, Math.min(Number(b.current_step) || 1, Math.max(guide.steps.length, 1)));
   const marks = (await manifestOf(guide)).chapters;
-  const done = (raw) => res.json(normalizeAsk(raw, guide, current, lang.code, marks));
+  // 自动语言检测：回答用“用户这句话的语言”，认不出来就沿用当前的语言（lang）。
+  // reply_language 是新增字段：前端据此切换 Ava 的声音和字幕；界面文字不跟着变。
+  const supported = (code) => LANGUAGES.find((l) => l.code === String(code || "").toLowerCase().slice(0, 2));
+  // heard_language：语音识别听出来的语言（文字太短时比看文字更可靠）
+  const local = supported(b.heard_language) || supported(detectLang(question)) || lang;
+  const done = (raw, reply = local) => res.json({ ...normalizeAsk(raw, guide, current, reply.code, marks), reply_language: reply.code });
   const blank = { answer_native: "", answer_en: "", button_id: null, play_from: null, play_to: null };
 
   // ① 红线：设备本身被拦截，或者问题本身危险 → 不交给模型，直接给固定的安全话术
@@ -666,7 +730,7 @@ app.post("/api/ask", async (req, res) => {
   if (kind) return done({ ...blank, intent: "danger", danger_kind: kind });
 
   // ② 没有 Claude（演示模式）：本地规则
-  if (!HAS_CLAUDE) return done(heuristicAsk(question, guide, current, lang.code));
+  if (!HAS_CLAUDE) return done(heuristicAsk(question, guide, current, local.code));
 
   // ③ Claude 判断问题类型。只发精简目录 + 当前步骤 + 问题
   try {
@@ -680,7 +744,8 @@ app.post("/api/ask", async (req, res) => {
         {
           role: "user",
           content:
-            `User's native language: ${lang.english} (${lang.name}, ${lang.code}).\n` +
+            `Conversation language: ${lang.english} (${lang.name}, ${lang.code}).\n` +
+            `Supported languages: ${LANGUAGES.map((l) => `${l.code} = ${l.english}`).join(", ")}.\n` +
             `CATALOG:\n${JSON.stringify(catalog(guide))}\n` +
             `Current step: ${current}\n` +
             `QUESTION: ${question}`,
@@ -688,10 +753,10 @@ app.post("/api/ask", async (req, res) => {
       ],
     });
     if (msg.stop_reason === "refusal" || !msg.parsed_output) return done({ ...blank, intent: "danger" });
-    done(msg.parsed_output);
+    done(msg.parsed_output, supported(msg.parsed_output.question_language) || lang);
   } catch (e) {
     console.error("ask", e);
-    done(heuristicAsk(question, guide, current, lang.code));
+    done(heuristicAsk(question, guide, current, local.code));
   }
 });
 
